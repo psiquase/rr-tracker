@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>◆ RR TRACKER — ACESSO ADMIN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: auto;
+    }
+    .login-wrap {
+      width: 100%;
+      max-width: 420px;
+      padding: 20px;
+    }
+    .login-card {
+      background: var(--card);
+      border: 2px solid var(--blue);
+      box-shadow: 6px 6px 0 var(--b-dark);
+    }
+    .login-header {
+      background: var(--blue);
+      padding: 14px 20px;
+      color: var(--bg);
+      font-family: var(--font-vt);
+      font-size: 22px;
+      letter-spacing: 3px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .login-body {
+      padding: 28px 24px;
+    }
+    .lock-icon {
+      font-size: 42px;
+      text-align: center;
+      margin-bottom: 18px;
+      color: var(--blue);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; }
+      50% { opacity: .5; }
+    }
+    .login-title {
+      text-align: center;
+      font-size: 11px;
+      color: var(--gray2);
+      letter-spacing: 2px;
+      margin-bottom: 24px;
+    }
+    .pwd-wrap {
+      position: relative;
+      margin-bottom: 20px;
+    }
+    .pwd-wrap input {
+      width: 100%;
+      background: var(--card2);
+      color: var(--white);
+      border: 1px solid var(--border2);
+      padding: 12px 44px 12px 14px;
+      font-family: var(--font-pixel);
+      font-size: 16px;
+      outline: none;
+      letter-spacing: 4px;
+    }
+    .pwd-wrap input:focus { border-color: var(--blue); }
+    .toggle-pwd {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--gray);
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .login-btn {
+      width: 100%;
+      background: var(--card);
+      color: var(--blue);
+      border: 2px solid var(--blue);
+      padding: 13px;
+      font-family: var(--font-pixel);
+      font-size: 13px;
+      letter-spacing: 2px;
+      cursor: pointer;
+      position: relative;
+      box-shadow: 4px 4px 0 var(--b-dark);
+      transition: transform .07s, box-shadow .07s;
+    }
+    .login-btn::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 5px;
+      background: var(--blue);
+    }
+    .login-btn:hover {
+      transform: translate(-2px,-2px);
+      box-shadow: 6px 6px 0 var(--b-dark);
+    }
+    .login-btn:active {
+      transform: translate(2px,2px);
+      box-shadow: 1px 1px 0 var(--b-dark);
+    }
+    .error-msg {
+      background: rgba(255,23,68,.08);
+      border-left: 4px solid var(--red);
+      color: var(--r-soft);
+      padding: 10px 14px;
+      font-size: 11px;
+      margin-bottom: 16px;
+    }
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 16px;
+      color: var(--gray);
+      font-size: 10px;
+      text-decoration: none;
+      letter-spacing: 1px;
+    }
+    .back-link:hover { color: var(--green); }
+    .dots {
+      text-align: center;
+      font-size: 9px;
+      color: var(--border2);
+      margin-top: 20px;
+      letter-spacing: 3px;
+    }
+  </style>
+</head>
+<body>
+<div class="scanlines" aria-hidden="true"></div>
+
+<div class="login-wrap">
+  <div class="login-card">
+
+    <div class="login-header">
+      <span>🔒</span>
+      <span>ACESSO RESTRITO</span>
+    </div>
+
+    <div class="login-body">
+
+      <div class="lock-icon">◈</div>
+      <div class="login-title">ÁREA ADMINISTRATIVA — RR TRACKER</div>
+
+      {% if error %}
+        <div class="error-msg">⚠ &nbsp;{{ error }}</div>
+      {% endif %}
+
+      <form method="POST" action="/login">
+        <input type="hidden" name="next" value="{{ next }}"/>
+
+        <label style="display:block;font-size:9px;color:var(--gray2);margin-bottom:6px;letter-spacing:1px">
+          ◆ SENHA DE ACESSO
+        </label>
+
+        <div class="pwd-wrap">
+          <input type="password" id="pwd" name="password"
+                 placeholder="••••••••"
+                 autofocus autocomplete="current-password"/>
+          <button type="button" class="toggle-pwd" onclick="togglePwd()" title="Mostrar/ocultar">👁</button>
+        </div>
+
+        <button type="submit" class="login-btn">
+          ▶ &nbsp; ENTRAR
+        </button>
+      </form>
+
+      <a href="/register" class="back-link">← VOLTAR PARA REGISTRO</a>
+
+      <div class="dots">◆ ◆ ◆</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function togglePwd() {
+  const i = document.getElementById('pwd');
+  i.type = i.type === 'password' ? 'text' : 'password';
+}
+// Submit on Enter
+document.getElementById('pwd').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') this.closest('form').submit();
+});
+</script>
+</body>
+</html>
