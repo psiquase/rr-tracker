@@ -454,7 +454,6 @@ def enrich_production(p):
 # ═══════════════════════════════════════════
 
 @app.route("/productions")
-@login_required
 def productions():
     with get_db() as c:
         rows = c.execute("SELECT * FROM productions ORDER BY started_at DESC").fetchall()
@@ -514,7 +513,6 @@ def production_new():
 
 
 @app.route("/productions/<int:pid>")
-@login_required
 def production_detail(pid):
     with get_db() as c:
         p = c.execute("SELECT * FROM productions WHERE id=?", (pid,)).fetchone()
@@ -534,7 +532,6 @@ def production_detail(pid):
 
 
 @app.route("/productions/<int:pid>/arc", methods=["POST"])
-@login_required
 def production_arc(pid):
     arc_num = int(request.form.get("arc", 0))
     action  = request.form.get("action", "toggle")  # toggle | check | uncheck
@@ -573,7 +570,6 @@ def production_arc(pid):
 
 
 @app.route("/productions/<int:pid>/status", methods=["POST"])
-@login_required
 def production_status(pid):
     new_status = request.form.get("status", "")
     valid = ("iniciado", "em_andamento", "pausado", "concluido")
@@ -600,7 +596,6 @@ def production_status(pid):
 
 
 @app.route("/productions/<int:pid>/log", methods=["POST"])
-@login_required
 def production_log(pid):
     chars = request.form.get("chars", "0").strip()
     notes = request.form.get("notes", "").strip()
