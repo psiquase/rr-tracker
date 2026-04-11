@@ -190,7 +190,7 @@ def db_trend():
 
 
 def calc_bdays(start_str, end_str=None):
-    """Business days between two date strings."""
+    # Business days between two date strings.
     try:
         start = date.fromisoformat(str(start_str)[:10])
         end   = date.fromisoformat(str(end_str)[:10]) if end_str else date.today()
@@ -208,9 +208,7 @@ def calc_bdays(start_str, end_str=None):
 
 
 def db_production_report():
-    """
-    Returns per-producer summary + all productions list for the report.
-    """
+    # Returns per-producer summary + all productions list for the report.
     with get_db() as c:
         all_prods = [dict(r) for r in c.execute(
             "SELECT * FROM productions ORDER BY producer, started_at DESC"
@@ -412,7 +410,7 @@ def db_shorts_all():
 
 
 def db_shorts_report():
-    """Average completion time per producer for shorts."""
+    # Average completion time per producer for shorts.
     rows = db_shorts_all()
     producers = {}
     for s in rows:
@@ -522,9 +520,12 @@ def shorts_delete(sid):
     with get_db() as c:
         c.execute("DELETE FROM shorts WHERE id=?", (sid,))
     return redirect(url_for("productions"))
+
+
+@app.route("/records/<int:rid>/delete", methods=["POST"])
 @login_required
 def record_delete(rid):
-    """Delete a re-recording record (admin only)."""
+    # Delete a re-recording record (admin only).
     with get_db() as c:
         c.execute("DELETE FROM records WHERE id=?", (rid,))
     # Return to reports page preserving tab and week
@@ -537,7 +538,7 @@ def record_delete(rid):
 # ═══════════════════════════════════════════
 
 def business_days_since(start_str):
-    """Count business days (Mon-Fri) from start date to today."""
+    # Count business days (Mon-Fri) from start date to today.
     try:
         start = date.fromisoformat(start_str[:10])
     except Exception:
@@ -568,15 +569,38 @@ def deadline_color(bdays, status):
 
 
 
+def prod_total_chars(prod_id):
+    with get_db() as c:
+        r = c.execute(
+            "SELECT COALESCE(SUM(chars_written),0) FROM production_daily WHERE production_id=?",
+            (prod_id,)
+        ).fetchone()
+    return r[0] if r else 0
+
+
+def prod_today_chars(prod_id):
+    today = date.today().isoformat()
+    with get_db() as c:
+        r = c.execute(
+            "SELECT COALESCE(SUM(chars_written),0) FROM production_daily WHERE production_id=? AND log_date=?",
+            (prod_id, today)
+        ).fetchone()
+    return r[0] if r else 0
+
+
 def enrich_production(p):
-    """Add computed fields to a production dict."""
+    # Add computed fields to a production dict.
     d = dict(p)
     d['arcs_done_list']  = json.loads(d.get('arcs_done') or '[]')
     d['arcs_done_count'] = len(d['arcs_done_list'])
     d['bdays']           = business_days_since(d['started_at'])
     d['dl_color']        = deadline_color(d['bdays'], d['status'])
     d['arc_pct']         = int(d['arcs_done_count'] / d['total_arcs'] * 100) if d['total_arcs'] else 0
-    # Duration: use completed_at if done, else ongoing
+    d['total_chars']     = prod_total_chars(d['id'])
+    d['today_chars']     = prod_today_chars(d['id'])
+    goal = 5000 * 4  # 4 dias úteis × 5000 chars
+    d['chars_pct']       = min(100, int(d['total_chars'] / goal * 100)) if goal else 0
+    d['today_pct']       = min(100, int(d['today_chars'] / 5000 * 100))
     if d['status'] == 'concluido' and d.get('completed_at'):
         d['duration_bdays'] = calc_bdays(d['started_at'], d['completed_at'])
     else:
@@ -633,9 +657,9 @@ def production_new():
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             with get_db() as c:
                 c.execute(
-                    """INSERT INTO productions
-                       (title,producer,total_arcs,arcs_done,status,started_at,updated_at,notes)
-                       VALUES (?,?,?,'[]','iniciado',?,?,?)""",
+                    ("INSERT INTO productions "
+                     "(title,producer,total_arcs,arcs_done,status,started_at,updated_at,notes) "
+                     "VALUES (?,?,?,'[]','iniciado',?,?,?)"),
                     (title, producer, int(total_arcs), now, now, notes)
                 )
             msg      = f"✔  Produção registrada: {title}"
@@ -653,10 +677,16 @@ def production_detail(pid):
         p = c.execute("SELECT * FROM productions WHERE id=?", (pid,)).fetchone()
         if not p:
             return redirect(url_for("productions"))
+        daily = c.execute(
+            "SELECT * FROM production_daily WHERE production_id=? ORDER BY log_date DESC",
+            (pid,)
+        ).fetchall()
     prod = enrich_production(p)
     today = date.today().isoformat()
     return render_template("production_detail.html",
-                           prod=prod, today=today,
+                           prod=prod,
+                           daily=[dict(d) for d in daily],
+                           today=today,
                            active="productions")
 
 
@@ -724,6 +754,38 @@ def production_status(pid):
     return redirect(url_for("production_detail", pid=pid))
 
 
+
+
+@app.route("/productions/<int:pid>/log", methods=["POST"])
+def production_log(pid):
+    chars    = request.form.get("chars", "0").strip()
+    notes    = request.form.get("notes", "").strip()
+    log_date = request.form.get("log_date", date.today().isoformat())
+    if not chars.isdigit(): chars = "0"
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with get_db() as c:
+        existing = c.execute(
+            "SELECT id, chars_written FROM production_daily WHERE production_id=? AND log_date=?",
+            (pid, log_date)
+        ).fetchone()
+        if existing:
+            c.execute("UPDATE production_daily SET chars_written=?, notes=? WHERE id=?",
+                      (existing["chars_written"] + int(chars), notes, existing["id"]))
+        else:
+            c.execute("INSERT INTO production_daily (production_id,log_date,chars_written,notes) VALUES (?,?,?,?)",
+                      (pid, log_date, int(chars), notes))
+        c.execute(
+            "UPDATE productions SET updated_at=?, status=CASE WHEN status='iniciado' THEN 'em_andamento' ELSE status END WHERE id=?",
+            (now_str, pid)
+        )
+    return redirect(url_for("production_detail", pid=pid))
+
+
+@app.route("/productions/<int:pid>/log/<int:lid>/delete", methods=["POST"])
+def log_delete(pid, lid):
+    with get_db() as c:
+        c.execute("DELETE FROM production_daily WHERE id=? AND production_id=?", (lid, pid))
+    return redirect(url_for("production_detail", pid=pid))
 
 
 @app.route("/productions/<int:pid>/delete", methods=["POST"])
