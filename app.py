@@ -658,30 +658,29 @@ def reports_download():
     from docx import Document as DocxDocument
     from docx.shared import Pt, RGBColor, Cm, Inches
     from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.enum.table import WD_ALIGN_VERTICAL
     from docx.oxml.ns import qn
     from docx.oxml import OxmlElement
 
+    # ── Collect all data ──────────────────────────────────
     weeks_back = int(request.args.get("w", 0))
     rows, mon, sun = db_weekly(weeks_back)
     for r in rows:
         r["tag"] = ("high"   if r["count"] >= 5 else
                     "medium" if r["count"] >= 3 else "low")
+    total_rr   = sum(r["count"] for r in rows)
+    st         = db_stats()
+    prods_by   = db_by_producer()
+    prod_summ, all_prods = db_production_report()
 
-    total    = sum(r["count"] for r in rows)
-    st       = db_stats()
-    prods_by = db_by_producer()
-
+    # ── Document setup ────────────────────────────────────
     doc = DocxDocument()
-
-    # ── Page margins ──────────────────────────────────────
     for section in doc.sections:
         section.top_margin    = Cm(2)
         section.bottom_margin = Cm(2)
-        section.left_margin   = Cm(2.5)
-        section.right_margin  = Cm(2.5)
+        section.left_margin   = Cm(2.2)
+        section.right_margin  = Cm(2.2)
 
-    # ── Helper: set paragraph shading ─────────────────────
+    # ── Helpers ───────────────────────────────────────────
     def shade_para(para, hex_color):
         pPr = para._p.get_or_add_pPr()
         shd = OxmlElement('w:shd')
@@ -691,203 +690,244 @@ def reports_download():
         pPr.append(shd)
 
     def shade_cell(cell, hex_color):
-        tc = cell._tc
+        tc   = cell._tc
         tcPr = tc.get_or_add_tcPr()
-        shd = OxmlElement('w:shd')
+        shd  = OxmlElement('w:shd')
         shd.set(qn('w:val'), 'clear')
         shd.set(qn('w:color'), 'auto')
         shd.set(qn('w:fill'), hex_color)
         tcPr.append(shd)
 
-    def set_cell_border(cell, **kwargs):
-        tc = cell._tc
-        tcPr = tc.get_or_add_tcPr()
-        tcBorders = OxmlElement('w:tcBorders')
-        for edge in ('top','bottom','left','right'):
-            tag = OxmlElement(f'w:{edge}')
-            tag.set(qn('w:val'), kwargs.get(edge, {}).get('val','single'))
-            tag.set(qn('w:sz'),  str(kwargs.get(edge, {}).get('sz', 4)))
-            tag.set(qn('w:color'), kwargs.get(edge, {}).get('color','CCCCCC'))
-            tcBorders.append(tag)
-        tcPr.append(tcBorders)
+    def section_title(text, hex_color):
+        p = doc.add_paragraph()
+        r = p.add_run(f'  {text}  ')
+        r.font.name  = 'Courier New'
+        r.font.size  = Pt(10)
+        r.font.bold  = True
+        r.font.color.rgb = RGBColor(0x08, 0x08, 0x10)
+        shade_para(p, hex_color)
+        doc.add_paragraph()
 
-    # ═══════════════════════════════
-    # HEADER BLOCK
-    # ═══════════════════════════════
+    def add_table(headers, col_widths, hdr_color_rgb):
+        t = doc.add_table(rows=1, cols=len(headers))
+        t.style = 'Table Grid'
+        t.autofit = False
+        for i, (h, w) in enumerate(zip(headers, col_widths)):
+            c = t.rows[0].cells[i]
+            c.width = w
+            shade_cell(c, '111126')
+            run = c.paragraphs[0].add_run(h)
+            run.font.name = 'Courier New'
+            run.font.size = Pt(8)
+            run.font.bold = True
+            run.font.color.rgb = hdr_color_rgb
+        return t
+
+    def add_row(table, values, col_widths, bg, fg_rgb):
+        tr = table.add_row()
+        for i, (v, w) in enumerate(zip(values, col_widths)):
+            c = tr.cells[i]
+            c.width = w
+            shade_cell(c, bg)
+            run = c.paragraphs[0].add_run(str(v))
+            run.font.name  = 'Courier New'
+            run.font.size  = Pt(9)
+            run.font.color.rgb = fg_rgb
+        return tr
+
+    # ══════════════════════════════════════════════════════
+    # PAGE 1 — HEADER
+    # ══════════════════════════════════════════════════════
     hdr = doc.add_paragraph()
     hdr.alignment = WD_ALIGN_PARAGRAPH.CENTER
     shade_para(hdr, '0A0A1A')
     run = hdr.add_run('◆  RE-RECORDING TRACKER  ◆')
-    run.font.name = 'Courier New'
-    run.font.size = Pt(20)
+    run.font.name = 'Courier New'; run.font.size = Pt(20)
     run.font.bold = True
     run.font.color.rgb = RGBColor(0x40, 0xC4, 0xFF)
 
     sub = doc.add_paragraph()
     sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
     shade_para(sub, '0A0A1A')
-    r2 = sub.add_run('RELATÓRIO SEMANAL DE REGRAVAÇÔES')
-    r2.font.name = 'Courier New'
-    r2.font.size = Pt(11)
+    r2 = sub.add_run('RELATÓRIO COMPLETO — REGRAVAÇÔES + PRODUÇÕES')
+    r2.font.name = 'Courier New'; r2.font.size = Pt(11)
     r2.font.color.rgb = RGBColor(0x66, 0x66, 0x88)
 
     period = doc.add_paragraph()
     period.alignment = WD_ALIGN_PARAGRAPH.CENTER
     shade_para(period, '0D0D1C')
-    rp = period.add_run(f'Período: {mon.strftime("%d/%m/%Y")}  →  {sun.strftime("%d/%m/%Y")}   |   Gerado em: {datetime.now().strftime("%d/%m/%Y %H:%M")}')
-    rp.font.name = 'Courier New'
-    rp.font.size = Pt(9)
+    rp = period.add_run(
+        f'Gerado em: {datetime.now().strftime("%d/%m/%Y %H:%M")}   |   '
+        f'Período regravaçôes: {mon.strftime("%d/%m/%Y")} → {sun.strftime("%d/%m/%Y")}'
+    )
+    rp.font.name = 'Courier New'; rp.font.size = Pt(9)
     rp.font.color.rgb = RGBColor(0x40, 0xC4, 0xFF)
-
-    doc.add_paragraph()  # spacer
-
-    # ═══════════════════════════════
-    # SUMMARY CARDS ROW (table 3 cols)
-    # ═══════════════════════════════
-    def section_title(text, hex_color):
-        p = doc.add_paragraph()
-        r = p.add_run(f'  {text}  ')
-        r.font.name = 'Courier New'
-        r.font.size = Pt(10)
-        r.font.bold = True
-        r.font.color.rgb = RGBColor(0x08, 0x08, 0x10)
-        shade_para(p, hex_color)
-        doc.add_paragraph()
-
-    section_title('◆  RESUMO GERAL', '40C4FF')
-
-    tbl = doc.add_table(rows=2, cols=3)
-    tbl.style = 'Table Grid'
-    tbl.autofit = False
-
-    w3 = int(Inches(6.3) / 3)
-    for i, (label, val, color) in enumerate([
-        ('TOTAL REGRAVAÇÔES', str(total), '1A0A1A' if total > 20 else '0A1A0A'),
-        ('REGISTROS NA SEMANA', str(len(rows)), '0A0A1A'),
-        ('TOTAL GERAL', str(st['total']), '0A0A1A'),
-    ]):
-        cell_h = tbl.cell(0, i)
-        cell_v = tbl.cell(1, i)
-        shade_cell(cell_h, '111126')
-        shade_cell(cell_v, '0A0A1A')
-        ph = cell_h.paragraphs[0]
-        ph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        rh = ph.add_run(label)
-        rh.font.name = 'Courier New'; rh.font.size = Pt(8); rh.font.bold = True
-        rh.font.color.rgb = RGBColor(0x40, 0xC4, 0xFF)
-        pv = cell_v.paragraphs[0]
-        pv.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        rv = pv.add_run(val)
-        rv.font.name = 'Courier New'; rv.font.size = Pt(22); rv.font.bold = True
-        rv.font.color.rgb = (RGBColor(0xFF, 0x17, 0x44) if total > 20 else
-                             RGBColor(0xFF, 0xD7, 0x00) if total > 8 else
-                             RGBColor(0x00, 0xE6, 0x76))
-        for c in [cell_h, cell_v]:
-            c.width = w3
 
     doc.add_paragraph()
 
-    # ═══════════════════════════════
-    # RECORDS TABLE
-    # ═══════════════════════════════
+    # ══════════════════════════════════════════════════════
+    # SECTION 1 — RESUMO GERAL
+    # ══════════════════════════════════════════════════════
+    section_title('◆  RESUMO GERAL', '40C4FF')
+
+    total_prods     = len(all_prods)
+    total_concluido = sum(1 for p in all_prods if p['status'] == 'concluido')
+    total_andamento = sum(1 for p in all_prods if p['status'] in ('em_andamento','iniciado'))
+
+    summary_items = [
+        ('REGRAVAÇÔES (SEMANA)', str(total_rr),      '1A0A0A' if total_rr>20 else '0A1A0A'),
+        ('TOTAL REGRAVAÇÔES',    str(st['total']),   '0A0A1A'),
+        ('PRODUÇÕES TOTAL',      str(total_prods),   '0A0A1A'),
+        ('PRODUÇÕES CONCLUÍDAS', str(total_concluido),'0A1A0A'),
+        ('EM ANDAMENTO',         str(total_andamento),'0A0A1A'),
+    ]
+
+    tbl = doc.add_table(rows=2, cols=len(summary_items))
+    tbl.style = 'Table Grid'; tbl.autofit = False
+    col_w = int(Inches(6.6) / len(summary_items))
+    for i, (label, val, _) in enumerate(summary_items):
+        ch = tbl.cell(0, i); cv = tbl.cell(1, i)
+        ch.width = col_w; cv.width = col_w
+        shade_cell(ch, '111126'); shade_cell(cv, '0A0A1A')
+        rh = ch.paragraphs[0].add_run(label)
+        rh.font.name='Courier New'; rh.font.size=Pt(7); rh.font.bold=True
+        rh.font.color.rgb = RGBColor(0x40,0xC4,0xFF)
+        ch.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        rv = cv.paragraphs[0].add_run(val)
+        rv.font.name='Courier New'; rv.font.size=Pt(18); rv.font.bold=True
+        rv.font.color.rgb = RGBColor(0x00,0xE6,0x76)
+        cv.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    doc.add_paragraph()
+
+    # ══════════════════════════════════════════════════════
+    # SECTION 2 — REGRAVAÇÔES DA SEMANA
+    # ══════════════════════════════════════════════════════
     section_title('◆  REGRAVAÇÔES DA SEMANA', 'FFD700')
 
     if rows:
-        t = doc.add_table(rows=1, cols=5)
-        t.style = 'Table Grid'
-        t.autofit = False
-
-        col_widths = [Inches(1.4), Inches(1.5), Inches(0.6), Inches(2.0), Inches(1.1)]
-        headers    = ['PRODUTOR', 'PROJETO', 'QTDE', 'MOTIVO', 'DATA/HORA']
-        hrow = t.rows[0]
-        for i, (h, w) in enumerate(zip(headers, col_widths)):
-            cell = hrow.cells[i]
-            cell.width = w
-            shade_cell(cell, '111126')
-            p = cell.paragraphs[0]
-            run = p.add_run(h)
-            run.font.name = 'Courier New'; run.font.size = Pt(8); run.font.bold = True
-            run.font.color.rgb = RGBColor(0xFF, 0xD7, 0x00)
-
-        tag_colors = {
-            'high':   ('220808', RGBColor(0xFF, 0xB0, 0xBE)),
-            'medium': ('201800', RGBColor(0xFF, 0xF0, 0xA0)),
-            'low':    ('081808', RGBColor(0xB0, 0xFF, 0xD4)),
+        cw = [Inches(1.3), Inches(1.4), Inches(0.5), Inches(1.9), Inches(0.9), Inches(0.8)]
+        t = add_table(
+            ['PRODUTOR','PROJETO','QTDE','MOTIVO','DATA','NÍVEL'],
+            cw, RGBColor(0xFF,0xD7,0x00)
+        )
+        tag_map = {
+            'high':   ('220808', RGBColor(0xFF,0xB0,0xBE), 'ALTO'),
+            'medium': ('201800', RGBColor(0xFF,0xF0,0xA0), 'MÉDIO'),
+            'low':    ('081808', RGBColor(0xB0,0xFF,0xD4), 'BAIXO'),
         }
-
         for row in rows:
-            tr = t.add_row()
-            bg, fg = tag_colors[row['tag']]
-            vals = [row['producer'], row['project'],
-                    str(row['count']), row['reason'],
-                    row['created_at'][:16]]
-            for i, (v, w) in enumerate(zip(vals, col_widths)):
-                c = tr.cells[i]
-                c.width = w
-                shade_cell(c, bg)
-                p = c.paragraphs[0]
-                r = p.add_run(v)
-                r.font.name = 'Courier New'
-                r.font.size = Pt(9)
-                r.font.color.rgb = fg
+            bg, fg, nivel = tag_map[row['tag']]
+            add_row(t,
+                [row['producer'], row['project'], row['count'],
+                 row['reason'], row['created_at'][:10], nivel],
+                cw, bg, fg)
     else:
-        p = doc.add_paragraph('Nenhum registro encontrado para este período.')
-        p.runs[0].font.color.rgb = RGBColor(0x66, 0x66, 0x88)
+        p = doc.add_paragraph('Nenhuma regravação registrada neste período.')
+        p.runs[0].font.color.rgb = RGBColor(0x66,0x66,0x88)
 
     doc.add_paragraph()
 
-    # ═══════════════════════════════
-    # BY PRODUCER TABLE
-    # ═══════════════════════════════
-    section_title('◆  TOTAL POR PRODUTOR', 'FF1744')
+    # ══════════════════════════════════════════════════════
+    # SECTION 3 — REGRAVAÇÔES POR PRODUTOR (acumulado)
+    # ══════════════════════════════════════════════════════
+    section_title('◆  REGRAVAÇÔES POR PRODUTOR — ACUMULADO', 'FF1744')
 
     if prods_by:
-        t2 = doc.add_table(rows=1, cols=3)
-        t2.style = 'Table Grid'
-        t2.autofit = False
-        pw = [Inches(2.2), Inches(1.2), Inches(3.2)]
-        for i, (h, w) in enumerate(zip(['PRODUTOR','TOTAL','MOTIVO PRINCIPAL'], pw)):
-            c = t2.rows[0].cells[i]; c.width = w
-            shade_cell(c, '111126')
-            r = c.paragraphs[0].add_run(h)
-            r.font.name = 'Courier New'; r.font.size = Pt(8); r.font.bold = True
-            r.font.color.rgb = RGBColor(0xFF, 0x17, 0x44)
-
+        cw2 = [Inches(2.3), Inches(1.0), Inches(3.0)]
+        t2 = add_table(['PRODUTOR','TOTAL','MOTIVO PRINCIPAL'], cw2,
+                        RGBColor(0xFF,0x17,0x44))
         for pb in prods_by:
-            tr = t2.add_row()
-            total_p = pb['total']
-            bg = ('220808' if total_p >= 10 else '201800' if total_p >= 5 else '081808')
-            fg = (RGBColor(0xFF,0xB0,0xBE) if total_p >= 10 else
-                  RGBColor(0xFF,0xF0,0xA0) if total_p >= 5 else
+            tv = pb['total']
+            bg = ('220808' if tv>=10 else '201800' if tv>=5 else '081808')
+            fg = (RGBColor(0xFF,0xB0,0xBE) if tv>=10 else
+                  RGBColor(0xFF,0xF0,0xA0) if tv>=5 else
                   RGBColor(0xB0,0xFF,0xD4))
-            vals2 = [pb['producer'], str(pb['total']), pb.get('top_reason') or '—']
-            for i, (v, w) in enumerate(zip(vals2, pw)):
-                c = tr.cells[i]; c.width = w
-                shade_cell(c, bg)
-                r = c.paragraphs[0].add_run(v)
-                r.font.name = 'Courier New'; r.font.size = Pt(9); r.font.color.rgb = fg
+            add_row(t2, [pb['producer'], tv, pb.get('top_reason') or '—'],
+                    cw2, bg, fg)
 
     doc.add_paragraph()
 
-    # ═══════════════════════════════
+    # ══════════════════════════════════════════════════════
+    # SECTION 4 — RESUMO DE PRODUÇÕES POR PRODUTOR
+    # ══════════════════════════════════════════════════════
+    section_title('◆  PRODUÇÕES — RESUMO POR PRODUTOR', '00E676')
+
+    if prod_summ:
+        cw3 = [Inches(1.7), Inches(0.65), Inches(0.65), Inches(0.65),
+               Inches(0.65), Inches(0.85), Inches(1.1)]
+        t3 = add_table(
+            ['PRODUTOR','TOTAL','INIC.','ANDAMENTO','PAUSADO','CONCLUÍDO','TEMPO MÉDIO'],
+            cw3, RGBColor(0x00,0xE6,0x76)
+        )
+        for g in sorted(prod_summ, key=lambda x: x['total'], reverse=True):
+            avg = f"{g['avg_bdays']} d.u." if g['avg_bdays'] is not None else '—'
+            add_row(t3, [
+                g['producer'], g['total'],
+                g['iniciado'], g['em_andamento'],
+                g['pausado'],  g['concluido'], avg
+            ], cw3, '081808', RGBColor(0xB0,0xFF,0xD4))
+
+    doc.add_paragraph()
+
+    # ══════════════════════════════════════════════════════
+    # SECTION 5 — HISTÓRICO COMPLETO DE PRODUÇÕES
+    # ══════════════════════════════════════════════════════
+    section_title('◆  PRODUÇÕES — HISTÓRICO COMPLETO', 'BB44FF')
+
+    if all_prods:
+        status_label = {
+            'iniciado':    'INICIADO',
+            'em_andamento':'EM ANDAMENTO',
+            'pausado':     'PAUSADO',
+            'concluido':   'CONCLUÍDO',
+        }
+        status_bg = {
+            'iniciado':    ('0A0A1A', RGBColor(0xC0,0xEE,0xFF)),
+            'em_andamento':('081808', RGBColor(0xB0,0xFF,0xD4)),
+            'pausado':     ('201800', RGBColor(0xFF,0xF0,0xA0)),
+            'concluido':   ('0A1A0A', RGBColor(0x80,0xFF,0xA0)),
+        }
+        cw4 = [Inches(1.5), Inches(2.2), Inches(0.8), Inches(1.2),
+               Inches(0.8), Inches(0.6)]
+        t4 = add_table(
+            ['PRODUTOR','TÍTULO','ARCOS','STATUS','INÍCIO','DURAÇÃO'],
+            cw4, RGBColor(0xBB,0x44,0xFF)
+        )
+        for p in sorted(all_prods, key=lambda x: x['started_at'], reverse=True):
+            bg, fg = status_bg.get(p['status'], ('0A0A1A', RGBColor(0xF0,0xF0,0xF8)))
+            arcos  = f"{p['arcs_done_count']}/{p['total_arcs']}"
+            dur    = f"{p['duration_bdays']} d.u."
+            add_row(t4, [
+                p['producer'],
+                p['title'][:32],
+                arcos,
+                status_label.get(p['status'], p['status']),
+                p['started_at'][:10],
+                dur,
+            ], cw4, bg, fg)
+
+    doc.add_paragraph()
+
+    # ══════════════════════════════════════════════════════
     # FOOTER
-    # ═══════════════════════════════
+    # ══════════════════════════════════════════════════════
     footer_p = doc.add_paragraph()
     footer_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     shade_para(footer_p, '0A0A1A')
-    rf = footer_p.add_run(f'◆  RR Tracker  |  Gerado automaticamente  |  {datetime.now().strftime("%d/%m/%Y %H:%M")}  ◆')
-    rf.font.name = 'Courier New'
-    rf.font.size = Pt(8)
+    rf = footer_p.add_run(
+        f'◆  RR Tracker  |  Relatório gerado automaticamente  |  '
+        f'{datetime.now().strftime("%d/%m/%Y %H:%M")}  ◆'
+    )
+    rf.font.name = 'Courier New'; rf.font.size = Pt(8)
     rf.font.color.rgb = RGBColor(0x28, 0x28, 0x50)
 
-    # ── Save to buffer and send ────────────────────────────
+    # ── Send file ─────────────────────────────────────────
     buf = io.BytesIO()
     doc.save(buf)
     buf.seek(0)
 
-    week_label = f"{mon.strftime('%d-%m')}_{sun.strftime('%d-%m-%Y')}"
-    filename   = f"relatorio_semanal_{week_label}.docx"
-
+    filename = f"relatorio_completo_{datetime.now().strftime('%d-%m-%Y_%H-%M')}.docx"
     return send_file(
         buf,
         as_attachment=True,
