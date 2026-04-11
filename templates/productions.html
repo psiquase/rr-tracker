@@ -75,35 +75,38 @@
 
       <!-- Arcos progress -->
       <div style="flex:1;min-width:160px">
-        <div style="font-size:9px;color:var(--gray2);margin-bottom:5px">◆ ARCOS</div>
+        <div style="font-size:9px;color:var(--gray2);margin-bottom:5px;letter-spacing:1px">◆ ARCOS GRAVADOS</div>
         <div style="display:flex;align-items:center;gap:8px">
           <div style="flex:1;background:var(--card2);height:8px;border:1px solid var(--border2)">
             <div style="height:100%;background:var(--{{ sc }});width:{{ p.arc_pct }}%"></div>
           </div>
-          <span style="font-size:11px;color:var(--{{ sc }});white-space:nowrap">{{ p.arcs_done_count }}/{{ p.total_arcs }}</span>
+          <span style="font-size:11px;color:var(--{{ sc }});white-space:nowrap">
+            {{ p.arcs_done_count }}/{{ p.total_arcs }}
+          </span>
         </div>
       </div>
 
-      <!-- Chars -->
-      <div style="flex:1;min-width:160px">
-        <div style="font-size:9px;color:var(--gray2);margin-bottom:5px">◆ CARACTERES</div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <div style="flex:1;background:var(--card2);height:8px;border:1px solid var(--border2)">
-            <div style="height:100%;background:var(--blue);width:{{ p.chars_pct }}%"></div>
-          </div>
-          <span style="font-size:11px;color:var(--blue);white-space:nowrap">{{ p.total_chars }}</span>
+      <!-- Duration -->
+      <div style="min-width:120px">
+        <div style="font-size:9px;color:var(--gray2);margin-bottom:5px;letter-spacing:1px">
+          ◆ {% if p.status == 'concluido' %}DURAÇÃO{% else %}EM CURSO{% endif %}
+        </div>
+        <div style="display:flex;align-items:baseline;gap:4px">
+          <span style="font-family:var(--font-vt);font-size:24px;color:var(--{{ sc }});line-height:1">
+            {{ p.duration_bdays }}
+          </span>
+          <span style="font-size:9px;color:var(--gray2)">dias úteis</span>
         </div>
       </div>
 
       <!-- Deadline — admin only -->
       {% if is_admin %}
-      <div style="text-align:center;min-width:80px">
-        <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">◆ PRAZO</div>
+      <div style="text-align:center;min-width:90px">
+        <div style="font-size:9px;color:var(--gray2);margin-bottom:2px;letter-spacing:1px">◆ PRAZO</div>
         {% if p.status == 'concluido' %}
           <span style="color:var(--green);font-size:11px">✔ OK</span>
         {% elif p.bdays <= 4 %}
-          <span style="color:var(--{{ sc }});font-family:var(--font-vt);font-size:22px">{{ 4 - p.bdays }}</span>
-          <span style="font-size:9px;color:var(--gray2)"> dias rest.</span>
+          <span style="color:var(--{{ sc }});font-size:11px">{{ 4 - p.bdays }}d restantes</span>
         {% else %}
           <span style="color:var(--red);font-size:11px">⚠ ATRASADO</span>
         {% endif %}
