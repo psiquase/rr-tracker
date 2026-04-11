@@ -102,6 +102,26 @@ def init_db():
             );
         """)
 
+        # ── Shorts table (new clean schema) ──────────────────
+        # Migrate if old schema exists (had 'chars' column instead of started_at)
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(shorts)").fetchall()]
+        if cols and 'started_at' not in cols:
+            conn.execute("DROP TABLE shorts")
+            conn.commit()
+
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS shorts (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                title        TEXT    NOT NULL,
+                producer     TEXT    NOT NULL,
+                status       TEXT    DEFAULT 'iniciado',
+                started_at   TEXT    NOT NULL,
+                completed_at TEXT,
+                paused_at    TEXT,
+                notes        TEXT    DEFAULT ''
+            );
+        """)
+
 
 init_db()
 
@@ -348,6 +368,7 @@ def reports():
 
     # Production report data
     prod_by_producer, all_prods = db_production_report()
+    shorts_summ, all_shorts     = db_shorts_report()
 
     return render_template("reports.html",
                            rows=rows, total=total,
@@ -357,6 +378,8 @@ def reports():
                            tab=tab,
                            prod_by_producer=prod_by_producer,
                            all_prods=all_prods,
+                           shorts_summ=shorts_summ,
+                           all_shorts=[enrich_short(s) for s in all_shorts],
                            active="reports")
 
 
@@ -371,13 +394,128 @@ def chart_data():
     })
 
 
-# ── Health check (Render requires a responsive endpoint) ─────
+# ── Health check ──────────────────────────────────────────────
 @app.route("/health")
 def health():
     return "OK", 200
 
 
-@app.route("/records/<int:rid>/delete", methods=["POST"])
+# ═══════════════════════════════════════════
+#  SHORTS HELPERS
+# ═══════════════════════════════════════════
+
+def db_shorts_all():
+    with get_db() as c:
+        return [dict(r) for r in c.execute(
+            "SELECT * FROM shorts ORDER BY started_at DESC"
+        ).fetchall()]
+
+
+def db_shorts_report():
+    """Average completion time per producer for shorts."""
+    rows = db_shorts_all()
+    producers = {}
+    for s in rows:
+        name = s['producer']
+        if name not in producers:
+            producers[name] = {
+                'producer':   name,
+                'total':      0,
+                'concluido':  0,
+                'andamento':  0,
+                'pausado':    0,
+                'avg_bdays':  None,
+                '_durs':      [],
+            }
+        g = producers[name]
+        g['total'] += 1
+        st = s['status']
+        if st == 'concluido':
+            g['concluido'] += 1
+            if s.get('completed_at'):
+                g['_durs'].append(calc_bdays(s['started_at'], s['completed_at']))
+        elif st == 'pausado':
+            g['pausado'] += 1
+        else:
+            g['andamento'] += 1
+    for g in producers.values():
+        g['avg_bdays'] = round(sum(g['_durs'])/len(g['_durs']), 1) if g['_durs'] else None
+        del g['_durs']
+    return list(producers.values()), rows
+
+
+def enrich_short(s):
+    d = dict(s)
+    if d['status'] == 'concluido' and d.get('completed_at'):
+        d['duration_bdays'] = calc_bdays(d['started_at'], d['completed_at'])
+    else:
+        d['duration_bdays'] = calc_bdays(d['started_at'])
+    return d
+
+
+# ═══════════════════════════════════════════
+#  SHORTS ROUTES
+
+
+@app.route("/shorts")
+def shorts():
+    all_s = [enrich_short(s) for s in db_shorts_all()]
+    summ  = {
+        'total':     len(all_s),
+        'andamento': sum(1 for s in all_s if s['status'] in ('iniciado','em_andamento')),
+        'concluido': sum(1 for s in all_s if s['status'] == 'concluido'),
+        'pausado':   sum(1 for s in all_s if s['status'] == 'pausado'),
+    }
+    return render_template("shorts.html", shorts=all_s, summ=summ, active="shorts")
+
+
+@app.route("/shorts/new", methods=["GET", "POST"])
+def shorts_new():
+    msg = msg_type = None
+    if request.method == "POST":
+        title    = request.form.get("title",    "").strip()
+        producer = request.form.get("producer", "").strip()
+        notes    = request.form.get("notes",    "").strip()
+        errors   = []
+        if not title:    errors.append("Título obrigatório")
+        if not producer: errors.append("Produtor obrigatório")
+        if errors:
+            msg = " | ".join(errors); msg_type = "error"
+        else:
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            with get_db() as c:
+                c.execute(
+                    "INSERT INTO shorts (title,producer,status,started_at,notes) VALUES (?,?,?,?,?)",
+                    (title, producer, "em_andamento", now, notes)
+                )
+            msg = f"✔  Short iniciado: {title}"; msg_type = "success"
+    return render_template("shorts_new.html", msg=msg, msg_type=msg_type, active="shorts")
+
+
+@app.route("/shorts/<int:sid>/status", methods=["POST"])
+def shorts_status(sid):
+    new_status = request.form.get("status", "")
+    if new_status not in ("em_andamento", "pausado", "concluido", "iniciado"):
+        return redirect(url_for("shorts"))
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with get_db() as c:
+        if new_status == "concluido":
+            c.execute("UPDATE shorts SET status=?, completed_at=? WHERE id=?",
+                      (new_status, now, sid))
+        elif new_status == "pausado":
+            c.execute("UPDATE shorts SET status=?, paused_at=? WHERE id=?",
+                      (new_status, now, sid))
+        else:
+            c.execute("UPDATE shorts SET status=? WHERE id=?", (new_status, sid))
+    return redirect(url_for("shorts"))
+
+
+@app.route("/shorts/<int:sid>/delete", methods=["POST"])
+@login_required
+def shorts_delete(sid):
+    with get_db() as c:
+        c.execute("DELETE FROM shorts WHERE id=?", (sid,))
+    return redirect(url_for("shorts"))
 @login_required
 def record_delete(rid):
     """Delete a re-recording record (admin only)."""
@@ -386,15 +524,6 @@ def record_delete(rid):
     # Return to reports page preserving tab and week
     ref = request.referrer or "/reports?tab=regravaçoes"
     return redirect(ref)
-
-
-@app.route("/productions/<int:pid>/log/<int:lid>/delete", methods=["POST"])
-def log_delete(pid, lid):
-    """Delete a daily log entry (public — producer can fix mistakes)."""
-    with get_db() as c:
-        c.execute("DELETE FROM production_daily WHERE id=? AND production_id=?",
-                  (lid, pid))
-    return redirect(url_for("production_detail", pid=pid))
 
 
 # ═══════════════════════════════════════════
@@ -429,39 +558,23 @@ def deadline_color(bdays, status):
     return 'red'
 
 
-def prod_total_chars(prod_id):
-    with get_db() as c:
-        r = c.execute(
-            "SELECT COALESCE(SUM(chars_written),0) FROM production_daily WHERE production_id=?",
-            (prod_id,)
-        ).fetchone()
-    return r[0] if r else 0
 
 
-def prod_today_chars(prod_id):
-    today = date.today().isoformat()
-    with get_db() as c:
-        r = c.execute(
-            "SELECT COALESCE(SUM(chars_written),0) FROM production_daily WHERE production_id=? AND log_date=?",
-            (prod_id, today)
-        ).fetchone()
-    return r[0] if r else 0
 
 
 def enrich_production(p):
     """Add computed fields to a production dict."""
     d = dict(p)
-    d['arcs_done_list'] = json.loads(d.get('arcs_done') or '[]')
+    d['arcs_done_list']  = json.loads(d.get('arcs_done') or '[]')
     d['arcs_done_count'] = len(d['arcs_done_list'])
-    d['bdays'] = business_days_since(d['started_at'])
-    d['dl_color'] = deadline_color(d['bdays'], d['status'])
-    d['total_chars'] = prod_total_chars(d['id'])
-    d['today_chars'] = prod_today_chars(d['id'])
-    # chars progress per day: goal 5000 * 4 days = 20000 total
-    goal = 5000 * 4
-    d['chars_pct'] = min(100, int(d['total_chars'] / goal * 100)) if goal else 0
-    d['today_pct'] = min(100, int(d['today_chars'] / 5000 * 100))
-    d['arc_pct'] = int(d['arcs_done_count'] / d['total_arcs'] * 100) if d['total_arcs'] else 0
+    d['bdays']           = business_days_since(d['started_at'])
+    d['dl_color']        = deadline_color(d['bdays'], d['status'])
+    d['arc_pct']         = int(d['arcs_done_count'] / d['total_arcs'] * 100) if d['total_arcs'] else 0
+    # Duration: use completed_at if done, else ongoing
+    if d['status'] == 'concluido' and d.get('completed_at'):
+        d['duration_bdays'] = calc_bdays(d['started_at'], d['completed_at'])
+    else:
+        d['duration_bdays'] = calc_bdays(d['started_at'])
     return d
 
 
@@ -534,17 +647,11 @@ def production_detail(pid):
         p = c.execute("SELECT * FROM productions WHERE id=?", (pid,)).fetchone()
         if not p:
             return redirect(url_for("productions"))
-        daily = c.execute(
-            "SELECT * FROM production_daily WHERE production_id=? ORDER BY log_date DESC",
-            (pid,)
-        ).fetchall()
-
     prod = enrich_production(p)
-    daily_list = [dict(d) for d in daily]
     today = date.today().isoformat()
     return render_template("production_detail.html",
-                           prod=prod, daily=daily_list,
-                           today=today, active="productions")
+                           prod=prod, today=today,
+                           active="productions")
 
 
 @app.route("/productions/<int:pid>/arc", methods=["POST"])
@@ -611,36 +718,6 @@ def production_status(pid):
     return redirect(url_for("production_detail", pid=pid))
 
 
-@app.route("/productions/<int:pid>/log", methods=["POST"])
-def production_log(pid):
-    chars = request.form.get("chars", "0").strip()
-    notes = request.form.get("notes", "").strip()
-    log_date = request.form.get("log_date", date.today().isoformat())
-    if not chars.isdigit():
-        chars = "0"
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    with get_db() as c:
-        # Update existing log for same date or insert
-        existing = c.execute(
-            "SELECT id, chars_written FROM production_daily WHERE production_id=? AND log_date=?",
-            (pid, log_date)
-        ).fetchone()
-        if existing:
-            new_chars = existing["chars_written"] + int(chars)
-            c.execute(
-                "UPDATE production_daily SET chars_written=?, notes=? WHERE id=?",
-                (new_chars, notes, existing["id"])
-            )
-        else:
-            c.execute(
-                "INSERT INTO production_daily (production_id,log_date,chars_written,notes) VALUES (?,?,?,?)",
-                (pid, log_date, int(chars), notes)
-            )
-        c.execute(
-            "UPDATE productions SET updated_at=?, status=CASE WHEN status='iniciado' THEN 'em_andamento' ELSE status END WHERE id=?",
-            (now_str, pid)
-        )
-    return redirect(url_for("production_detail", pid=pid))
 
 
 @app.route("/productions/<int:pid>/delete", methods=["POST"])
@@ -671,6 +748,8 @@ def reports_download():
     st         = db_stats()
     prods_by   = db_by_producer()
     prod_summ, all_prods = db_production_report()
+    shorts_summ, all_shorts_raw = db_shorts_report()
+    all_shorts = [enrich_short(s) for s in all_shorts_raw]
 
     # ── Document setup ────────────────────────────────────
     doc = DocxDocument()
@@ -854,14 +933,14 @@ def reports_download():
     section_title('◆  PRODUÇÕES — RESUMO POR PRODUTOR', '00E676')
 
     if prod_summ:
-        cw3 = [Inches(1.7), Inches(0.65), Inches(0.65), Inches(0.65),
-               Inches(0.65), Inches(0.85), Inches(1.1)]
+        cw3 = [Inches(1.7), Inches(0.7), Inches(0.7), Inches(0.7),
+               Inches(0.7), Inches(0.8), Inches(1.2)]
         t3 = add_table(
             ['PRODUTOR','TOTAL','INIC.','ANDAMENTO','PAUSADO','CONCLUÍDO','TEMPO MÉDIO'],
             cw3, RGBColor(0x00,0xE6,0x76)
         )
         for g in sorted(prod_summ, key=lambda x: x['total'], reverse=True):
-            avg = f"{g['avg_bdays']} d.u." if g['avg_bdays'] is not None else '—'
+            avg = f"{g['avg_bdays']} d.u." if g['avg_bdays'] is not None else 'sem concluídas'
             add_row(t3, [
                 g['producer'], g['total'],
                 g['iniciado'], g['em_andamento'],
@@ -906,6 +985,69 @@ def reports_download():
                 p['started_at'][:10],
                 dur,
             ], cw4, bg, fg)
+
+    doc.add_paragraph()
+
+    # ══════════════════════════════════════════════════════
+    # SECTION 6 — SHORTS — TEMPO MÉDIO POR PRODUTOR
+    # ══════════════════════════════════════════════════════
+    section_title('◆  SHORTS — TEMPO MÉDIO POR PRODUTOR', 'FFD700')
+
+    if shorts_summ:
+        cw5 = [Inches(1.8), Inches(0.7), Inches(0.8), Inches(0.7), Inches(0.8), Inches(1.1)]
+        t5 = add_table(
+            ['PRODUTOR','TOTAL','ANDAMENTO','PAUSADO','CONCLUÍDO','TEMPO MÉDIO'],
+            cw5, RGBColor(0xFF,0xD7,0x00)
+        )
+        for g in sorted(shorts_summ, key=lambda x: x['total'], reverse=True):
+            avg = f"{g['avg_bdays']} d.u." if g['avg_bdays'] is not None else 'sem concluídos'
+            add_row(t5, [
+                g['producer'], g['total'],
+                g['andamento'], g['pausado'],
+                g['concluido'], avg
+            ], cw5, '1a1500', RGBColor(0xFF,0xF0,0xA0))
+    else:
+        p = doc.add_paragraph('Nenhum short registrado.')
+        p.runs[0].font.color.rgb = RGBColor(0x66,0x66,0x88)
+
+    doc.add_paragraph()
+
+    # ══════════════════════════════════════════════════════
+    # SECTION 7 — SHORTS — HISTÓRICO COMPLETO
+    # ══════════════════════════════════════════════════════
+    section_title('◆  SHORTS — HISTÓRICO COMPLETO', 'BB44FF')
+
+    if all_shorts:
+        s_status = {
+            'iniciado':    'INICIADO',
+            'em_andamento':'EM ANDAMENTO',
+            'pausado':     'PAUSADO',
+            'concluido':   'CONCLUÍDO',
+        }
+        s_bg = {
+            'iniciado':    ('0A0A1A', RGBColor(0xC0,0xEE,0xFF)),
+            'em_andamento':('081808', RGBColor(0xB0,0xFF,0xD4)),
+            'pausado':     ('201800', RGBColor(0xFF,0xF0,0xA0)),
+            'concluido':   ('0A1A0A', RGBColor(0x80,0xFF,0xA0)),
+        }
+        cw6 = [Inches(1.5), Inches(2.2), Inches(1.2), Inches(0.9), Inches(0.9), Inches(0.7)]
+        t6 = add_table(
+            ['PRODUTOR','TÍTULO','STATUS','INÍCIO','CONCLUSÃO','DURAÇÃO'],
+            cw6, RGBColor(0xBB,0x44,0xFF)
+        )
+        for s in sorted(all_shorts, key=lambda x: x['started_at'], reverse=True):
+            bg, fg = s_bg.get(s['status'], ('0A0A1A', RGBColor(0xF0,0xF0,0xF8)))
+            add_row(t6, [
+                s['producer'],
+                s['title'][:30],
+                s_status.get(s['status'], s['status']),
+                s['started_at'][:10],
+                s['completed_at'][:10] if s.get('completed_at') else '—',
+                f"{s['duration_bdays']} d.u.",
+            ], cw6, bg, fg)
+    else:
+        p = doc.add_paragraph('Nenhum short registrado.')
+        p.runs[0].font.color.rgb = RGBColor(0x66,0x66,0x88)
 
     doc.add_paragraph()
 
