@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% block title %}DASHBOARD{% endblock %}
+{% block header_icon %}<span style="color:var(--blue)">◈</span>{% endblock %}
+{% block header_title %}<span style="color:var(--blue)">DASHBOARD — VISÃO GERAL</span>{% endblock %}
+
+{% block content %}
+
+<!-- ── Stat Cards ─────────────────────────────────────── -->
+<div style="margin-bottom:6px">
+  <span class="section-title blue">◆ RESUMO GERAL</span>
+</div>
+
+<div class="cards-row">
+
+  {% set total = stats.total %}
+  {% set tc = 'red' if total > 30 else 'yellow' if total > 10 else 'green' %}
+  <div class="stat-card {{ tc }}">
+    <div class="stat-card-title">TOTAL REGRAVAÇÔES</div>
+    <div class="stat-card-value" style="color:var(--{{ tc }})">{{ total }}</div>
+    <div class="stat-card-sub">todos os registros</div>
+  </div>
+
+  {% if stats.top_producer %}
+    {% set tp = stats.top_producer %}
+    {% set pc = 'red' if tp.t > 10 else 'yellow' if tp.t > 5 else 'green' %}
+    <div class="stat-card {{ pc }}">
+      <div class="stat-card-title">TOP PRODUTOR</div>
+      <div class="stat-card-value" style="color:var(--{{ pc }})">{{ tp.t }}</div>
+      <div class="stat-card-sub">{{ tp.producer }}</div>
+    </div>
+  {% else %}
+    <div class="stat-card blue">
+      <div class="stat-card-title">TOP PRODUTOR</div>
+      <div class="stat-card-value">—</div>
+      <div class="stat-card-sub">sem dados ainda</div>
+    </div>
+  {% endif %}
+
+  {% if stats.top_reason %}
+    <div class="stat-card yellow">
+      <div class="stat-card-title">MOTIVO FREQUENTE</div>
+      <div class="stat-card-value" style="font-size:28px;line-height:1.4;padding-top:6px">–</div>
+      <div class="stat-card-sub" style="font-size:10px;color:var(--y-soft)">{{ stats.top_reason.reason }}</div>
+    </div>
+  {% else %}
+    <div class="stat-card yellow">
+      <div class="stat-card-title">MOTIVO FREQUENTE</div>
+      <div class="stat-card-value">—</div>
+    </div>
+  {% endif %}
+
+  {% set wt = stats.week_total %}
+  {% set wc = 'red' if wt > 20 else 'yellow' if wt > 8 else 'green' %}
+  <div class="stat-card {{ wc }}">
+    <div class="stat-card-title">ESTA SEMANA</div>
+    <div class="stat-card-value" style="color:var(--{{ wc }})">{{ wt }}</div>
+    <div class="stat-card-sub">regravaçôes (seg→dom)</div>
+  </div>
+
+</div>
+
+<!-- ── Charts grid ────────────────────────────────────── -->
+<div class="charts-grid">
+
+  <div>
+    <div style="margin-bottom:10px">
+      <span class="section-title yellow">◆ POR MOTIVO</span>
+    </div>
+    <div class="chart-box">
+      {% if reasons %}
+        <canvas id="chartReasons" height="220"></canvas>
+      {% else %}
+        <div class="empty-state">⚠ Nenhum dado registrado ainda.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div>
+    <div style="margin-bottom:10px">
+      <span class="section-title red">◆ POR PRODUTOR</span>
+    </div>
+    <div class="chart-box">
+      {% if producers %}
+        <canvas id="chartProducers" height="220"></canvas>
+      {% else %}
+        <div class="empty-state">⚠ Nenhum dado registrado ainda.</div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Trend chart ────────────────────────────────────── -->
+<div style="margin-bottom:10px">
+  <span class="section-title green">◆ TENDÊNCIA (ÚLTIMOS 14 DIAS)</span>
+</div>
+<div class="chart-box">
+  {% if trend %}
+    <canvas id="chartTrend" height="120"></canvas>
+  {% else %}
+    <div class="empty-state">⚠ Sem dados suficientes para tendência.</div>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ── Chart.js global defaults ─────────────────────────── */
+Chart.defaults.color          = '#666688';
+Chart.defaults.font.family    = "'Share Tech Mono', 'Courier New', monospace";
+Chart.defaults.font.size      = 11;
+Chart.defaults.borderColor    = '#1c1c38';
+
+const COLORS = {
+  yellow: '#ffd700', green: '#00e676', blue: '#40c4ff',
+  red: '#ff1744', purple: '#bb44ff', orange: '#ff8800',
+  cyan: '#00e5ff', pink: '#f48fb1',
+};
+const PAL = Object.values(COLORS);
+
+function barDefaults(ctx) {
+  return {
+    backgroundColor: ctx,
+    borderColor: '#080810',
+    borderWidth: 1,
+    borderRadius: 0,
+    hoverBackgroundColor: ctx.map(c => c + 'cc'),
+  };
+}
+
+/* ── Reasons horizontal bar ──────────────────────────── */
+{% if reasons %}
+(function(){
+  const labels = {{ reasons | map(attribute='reason') | list | tojson }};
+  const data   = {{ reasons | map(attribute='total')  | list | tojson }};
+  const colors = PAL.slice(0, labels.length);
+
+  new Chart(document.getElementById('chartReasons'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Regravaçôes',
+        data,
+        backgroundColor: colors,
+        borderColor: '#080810',
+        borderWidth: 1,
+        borderRadius: 0,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          grid:  { color: '#1c1c38' },
+          ticks: { color: '#666688' },
+        },
+        y: {
+          grid:  { display: false },
+          ticks: { color: '#f0f0f8', font: { size: 10 } },
+        }
+      }
+    }
+  });
+})();
+{% endif %}
+
+/* ── Producers horizontal bar ────────────────────────── */
+{% if producers %}
+(function(){
+  const labels = {{ producers | map(attribute='producer') | list | tojson }};
+  const data   = {{ producers | map(attribute='total')    | list | tojson }};
+  const colors = data.map(v =>
+    v >= 10 ? '#ff1744' : v >= 5 ? '#ffd700' : '#00e676'
+  );
+
+  new Chart(document.getElementById('chartProducers'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Regravaçôes',
+        data,
+        backgroundColor: colors,
+        borderColor: '#080810',
+        borderWidth: 1,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: '#1c1c38' }, ticks: { color: '#666688' } },
+        y: { grid: { display: false },   ticks: { color: '#f0f0f8', font:{size:11} } }
+      }
+    }
+  });
+})();
+{% endif %}
+
+/* ── Trend line ──────────────────────────────────────── */
+{% if trend %}
+(function(){
+  const labels = {{ trend | map(attribute='day')   | list | tojson }};
+  const data   = {{ trend | map(attribute='total') | list | tojson }};
+
+  new Chart(document.getElementById('chartTrend'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Regravaçôes/dia',
+        data,
+        borderColor:     '#00e676',
+        backgroundColor: 'rgba(0,230,118,.08)',
+        pointBackgroundColor: '#00e676',
+        pointBorderColor:     '#080810',
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        borderWidth: 2,
+        tension: 0.3,
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color:'#1c1c38' }, ticks:{ color:'#666688' } },
+        y: { grid: { color:'#1c1c38' }, ticks:{ color:'#666688' },
+             beginAtZero: true }
+      }
+    }
+  });
+})();
+{% endif %}
+</script>
+{% endblock %}
