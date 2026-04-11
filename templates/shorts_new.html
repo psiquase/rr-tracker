@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}NOVO SHORT{% endblock %}
+{% block header_icon %}<span style="color:var(--yellow)">⚡</span>{% endblock %}
+{% block header_title %}<span style="color:var(--yellow)">NOVO SHORT</span>{% endblock %}
+
+{% block content %}
+<div style="max-width:560px;margin:0 auto">
+  <div style="margin-bottom:12px">
+    <span class="section-title yellow">◆ REGISTRAR NOVO SHORT</span>
+  </div>
+
+  <div class="form-card" style="border-color:var(--yellow);box-shadow:6px 6px 0 var(--y-dark)">
+    <div class="form-header" style="background:var(--yellow)">
+      <span>⚡</span>
+      <span>DADOS DO SHORT</span>
+      <span style="margin-left:auto;font-size:10px;opacity:.7">* OBRIGATÓRIO</span>
+    </div>
+    <div class="form-body">
+      <form method="POST" action="/shorts/new">
+
+        <div class="field-group">
+          <label class="field-label required">◆ TÍTULO DO SHORT</label>
+          <input class="pixel-input" type="text" name="title"
+                 placeholder="Ex: Zoomy no Servidor de Skibidi..."
+                 value="{{ request.form.get('title','') }}" required/>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label required">◆ PRODUTOR</label>
+          <input class="pixel-input" type="text" name="producer"
+                 placeholder="Seu nome..."
+                 value="{{ request.form.get('producer','') }}" required/>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">◆ OBSERVAÇÕES <span style="color:var(--gray2)">(opcional)</span></label>
+          <textarea class="pixel-textarea" name="notes"
+                    placeholder="Notas sobre este short...">{{ request.form.get('notes','') }}</textarea>
+        </div>
+
+        <div class="btn-row">
+          <button type="submit" class="action-btn"
+                  style="border-color:var(--yellow);color:var(--y-soft);position:relative">
+            <span style="position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--yellow)"></span>
+            ⚡ INICIAR PRODUÇÃO
+          </button>
+          <a href="/shorts" class="action-btn gray-btn">← VOLTAR</a>
+        </div>
+      </form>
+
+      {% if msg %}
+        <div class="status-msg {{ msg_type }}">
+          {% if msg_type=='success' %}✔{% else %}⚠{% endif %} &nbsp;{{ msg }}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div style="margin-top:14px;font-size:10px;color:var(--gray2);
+              border:1px solid var(--border2);padding:12px 14px;
+              background:var(--card)">
+    <span style="color:var(--yellow)">◆</span>&nbsp;
+    O início é registrado automaticamente ao criar o short.<br/>
+    Quando terminar, clique em <strong style="color:var(--gray2)">✔ FIM</strong>
+    na lista de shorts para registrar a conclusão.
+  </div>
+</div>
+{% endblock %}
