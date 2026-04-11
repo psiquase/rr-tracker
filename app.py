@@ -12,18 +12,18 @@ from functools import wraps
 from datetime import datetime, timedelta, date
 from flask import (Flask, render_template, request, jsonify,
                    redirect, url_for, session)
-
 app = Flask(__name__)
 
 # ── Secret key for sessions (change this in production!) ─────
 app.secret_key = os.environ.get("SECRET_KEY", "rr-tracker-pixel-2026")
 
+# ── Session config ────────────────────────────────────────────
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=12)
+
 # ── Admin password (set via env var ADMIN_PASSWORD on Render) ─
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "prota2026")
-
-# ── Server-side valid session tokens (in-memory) ─────────────
-import secrets as _secrets
-VALID_TOKENS: set = set()
 
 # ── Database path ─────────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -41,8 +41,7 @@ def inject_auth():
 # ═══════════════════════════════════════════
 
 def is_admin():
-    token = session.get("token")
-    return token is not None and token in VALID_TOKENS
+    return session.get("admin") is True
 
 def login_required(f):
     @wraps(f)
@@ -261,9 +260,8 @@ def login():
         pwd      = request.form.get("password", "")
         next_url = request.form.get("next", "/dashboard")
         if pwd == ADMIN_PASSWORD:
-            token = _secrets.token_hex(32)
-            VALID_TOKENS.add(token)
-            session["token"] = token
+            session.permanent = True
+            session["admin"]  = True
             return redirect(next_url)
         error = "Senha incorreta. Tente novamente."
     return render_template("login.html", error=error,
@@ -272,9 +270,6 @@ def login():
 
 @app.route("/logout")
 def logout():
-    token = session.get("token")
-    if token and token in VALID_TOKENS:
-        VALID_TOKENS.discard(token)
     session.clear()
     return redirect(url_for("register"))
 
