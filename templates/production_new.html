@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 {% block title %}NOVA PRODUÇÃO{% endblock %}
-{% block header_icon %}<span style="color:var(--green)">✚</span>{% endblock %}
-{% block header_title %}<span style="color:var(--green)">NOVA PRODUÇÃO</span>{% endblock %}
+{% block header_icon %}<span style="color:var(--red)">▶</span>{% endblock %}
+{% block header_title %}<span style="color:var(--red)">NOVA PRODUÇÃO</span>{% endblock %}
 
 {% block content %}
 <div style="max-width:580px;margin:0 auto">
   <div style="margin-bottom:12px">
-    <span class="section-title green">◆ CADASTRAR PRODUÇÃO</span>
+    <span class="section-title red">◆ INICIAR NOVA PRODUÇÃO</span>
   </div>
 
-  <div class="form-card">
+  <div class="form-card" style="border-color:var(--red);box-shadow:6px 6px 0 var(--r-dark)">
     <div class="form-header" style="background:var(--red)">
       <span>▶</span>
       <span>DADOS DA PRODUÇÃO</span>
@@ -28,7 +28,7 @@
         <div class="field-group">
           <label class="field-label required">◆ PRODUTOR RESPONSÁVEL</label>
           <input class="pixel-input" type="text" name="producer"
-                 placeholder="Nome do produtor..."
+                 placeholder="Seu nome..."
                  value="{{ request.form.get('producer','') }}" required/>
         </div>
 
@@ -36,7 +36,7 @@
           <label class="field-label required">◆ NÚMERO DE ARCOS</label>
           <input class="pixel-input" type="number" name="total_arcs"
                  min="1" max="15" value="{{ request.form.get('total_arcs','11') }}" required/>
-          <span style="font-size:9px;color:var(--gray2);display:block;margin-top:3px">Máximo 15 arcos por roteiro</span>
+          <span style="font-size:9px;color:var(--gray2);display:block;margin-top:3px">Máximo 15 arcos</span>
         </div>
 
         <div class="field-group">
@@ -46,14 +46,17 @@
         </div>
 
         <div class="btn-row">
-          <button type="submit" class="action-btn green-btn">✚ INICIAR PRODUÇÃO</button>
-          <a href="/productions" class="action-btn gray-btn">← VOLTAR</a>
+          <button type="submit" class="action-btn" style="border-color:var(--red);color:var(--r-soft);position:relative">
+            <span style="position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--red)"></span>
+            ▶ INICIAR PRODUÇÃO
+          </button>
+          <a href="/register" class="action-btn gray-btn">← REGRAVAÇÃO</a>
         </div>
       </form>
 
       {% if msg %}
         <div class="status-msg {{ msg_type }}">
-          {% if msg_type == 'success' %}✔{% else %}⚠{% endif %} {{ msg }}
+          {% if msg_type == 'success' %}✔{% else %}⚠{% endif %} &nbsp;{{ msg }}
         </div>
       {% endif %}
     </div>
