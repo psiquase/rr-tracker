@@ -28,6 +28,16 @@
     ▶ &nbsp;PRODUÇÕES
   </a>
 
+  <a href="/reports?tab=shorts&w={{ weeks_back }}"
+     style="padding:10px 22px;font-size:11px;letter-spacing:1px;text-decoration:none;
+            border:2px solid {% if tab=='shorts' %}var(--yellow){% else %}var(--border2){% endif %};
+            border-bottom:none;
+            background:{% if tab=='shorts' %}var(--card){% else %}var(--card2){% endif %};
+            color:{% if tab=='shorts' %}var(--yellow){% else %}var(--gray2){% endif %};
+            position:relative;top:2px">
+    ⚡ &nbsp;SHORTS
+  </a>
+
 </div>
 
 
@@ -302,6 +312,103 @@
 
   {% else %}
   <div class="empty-state">⚠ Nenhuma produção cadastrada ainda.</div>
+  {% endif %}
+
+{% elif tab == 'shorts' %}
+
+  <!-- ── Shorts por produtor ──────────────────────────── -->
+  <div style="margin-bottom:10px">
+    <span class="section-title yellow">◆ SHORTS — TEMPO MÉDIO POR PRODUTOR</span>
+  </div>
+
+  {% if shorts_summ %}
+  <div class="table-wrap" style="margin-bottom:24px">
+    <table class="pixel-table">
+      <thead>
+        <tr>
+          <th>PRODUTOR</th>
+          <th style="text-align:center">TOTAL</th>
+          <th style="text-align:center">EM ANDAMENTO</th>
+          <th style="text-align:center">PAUSADOS</th>
+          <th style="text-align:center">CONCLUÍDOS</th>
+          <th style="text-align:center">TEMPO MÉDIO</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in shorts_summ | sort(attribute='total', reverse=True) %}
+        <tr>
+          <td style="color:var(--white)">{{ g.producer }}</td>
+          <td style="text-align:center">
+            <span style="font-family:var(--font-vt);font-size:20px;color:var(--yellow)">{{ g.total }}</span>
+          </td>
+          <td style="text-align:center;color:var(--green)">{{ g.andamento or '—' }}</td>
+          <td style="text-align:center;color:var(--yellow)">{{ g.pausado or '—' }}</td>
+          <td style="text-align:center;color:var(--green)">{{ g.concluido or '—' }}</td>
+          <td style="text-align:center">
+            {% if g.avg_bdays is not none %}
+              <span style="font-family:var(--font-vt);font-size:20px;
+                           color:{% if g.avg_bdays <= 2 %}var(--green){% elif g.avg_bdays <= 4 %}var(--yellow){% else %}var(--red){% endif %}">
+                {{ g.avg_bdays }}
+              </span>
+              <span style="font-size:9px;color:var(--gray2)"> d.u.</span>
+            {% else %}
+              <span style="color:var(--gray2);font-size:10px">sem concluídos</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── Histórico completo ─────────────────────────── -->
+  <div style="margin-bottom:10px">
+    <span class="section-title yellow">◆ SHORTS — HISTÓRICO COMPLETO</span>
+  </div>
+
+  <div class="table-wrap">
+    <table class="pixel-table">
+      <thead>
+        <tr>
+          <th>PRODUTOR</th>
+          <th>TÍTULO</th>
+          <th style="text-align:center">STATUS</th>
+          <th style="text-align:center">INÍCIO</th>
+          <th style="text-align:center">CONCLUSÃO</th>
+          <th style="text-align:center">DURAÇÃO</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in all_shorts | sort(attribute='started_at', reverse=True) %}
+        {% set sc = {'iniciado':'var(--blue)','em_andamento':'var(--green)',
+                     'pausado':'var(--yellow)','concluido':'var(--gray2)'}[s.status] %}
+        {% set sl = {'iniciado':'INICIADO','em_andamento':'EM ANDAMENTO',
+                     'pausado':'PAUSADO','concluido':'CONCLUÍDO'}[s.status] %}
+        <tr style="{% if s.status=='concluido' %}background:rgba(0,230,118,.03){% endif %}">
+          <td>{{ s.producer }}</td>
+          <td style="color:var(--white)">{{ s.title }}</td>
+          <td style="text-align:center">
+            <span style="font-size:9px;color:{{ sc }};border:1px solid {{ sc }};padding:2px 8px">{{ sl }}</span>
+          </td>
+          <td style="text-align:center;font-size:10px;color:var(--gray2)">{{ s.started_at[:10] }}</td>
+          <td style="text-align:center;font-size:10px;color:{% if s.completed_at %}var(--green){% else %}var(--gray2){% endif %}">
+            {{ s.completed_at[:10] if s.completed_at else '—' }}
+          </td>
+          <td style="text-align:center">
+            <span style="font-family:var(--font-vt);font-size:18px;
+                         color:{% if s.duration_bdays <= 2 %}var(--green){% elif s.duration_bdays <= 4 %}var(--yellow){% else %}var(--red){% endif %}">
+              {{ s.duration_bdays }}
+            </span>
+            <span style="font-size:9px;color:var(--gray2)"> d.u.</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% else %}
+  <div class="empty-state">⚡ Nenhum short registrado ainda.</div>
   {% endif %}
 
 {% endif %}
