@@ -204,18 +204,26 @@
     {% if daily %}
       <div style="background:var(--card);border:1px solid var(--border2)">
         <div style="background:var(--card2);padding:8px 14px;display:grid;
-                    grid-template-columns:1fr 1fr 2fr;font-size:9px;
+                    grid-template-columns:1fr 1fr 2fr auto;font-size:9px;
                     color:var(--yellow);border-bottom:2px solid var(--yellow)">
-          <span>DATA</span><span>CHARS</span><span>NOTAS</span>
+          <span>DATA</span><span>CHARS</span><span>NOTAS</span><span></span>
         </div>
         {% for d in daily %}
-          <div style="padding:8px 14px;display:grid;grid-template-columns:1fr 1fr 2fr;
-                      border-bottom:1px solid var(--border);font-size:11px;align-items:center">
+          <div style="padding:8px 14px;display:grid;grid-template-columns:1fr 1fr 2fr auto;
+                      border-bottom:1px solid var(--border);font-size:11px;align-items:center;gap:8px">
             <span style="color:var(--white)">{{ d.log_date }}</span>
             <span style="color:{% if d.chars_written >= 5000 %}var(--green){% elif d.chars_written > 0 %}var(--yellow){% else %}var(--gray2){% endif %}">
               {{ d.chars_written }}{% if d.chars_written >= 5000 %} ✔{% endif %}
             </span>
             <span style="color:var(--gray2);font-size:10px">{{ d.notes or '—' }}</span>
+            <form method="POST" action="/productions/{{ prod.id }}/log/{{ d.id }}/delete"
+                  style="margin:0" onsubmit="return confirm('Deletar este registro?')">
+              <button type="submit"
+                      style="background:none;border:1px solid var(--r-dark);color:var(--r-dark);
+                             padding:2px 7px;cursor:pointer;font-family:var(--font-pixel);font-size:10px">
+                ✕
+              </button>
+            </form>
           </div>
         {% endfor %}
       </div>
