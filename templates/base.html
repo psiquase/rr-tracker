@@ -51,6 +51,11 @@
           <span class="btn-icon">▶</span>
           <span class="btn-label">PRODUÇÕES</span>
         </a>
+        <a href="/shorts" class="pixel-btn" style="border-color:#bb44ff;{% if active=='shorts' %}background:var(--hover){% endif %}">
+          <span class="btn-stripe" style="background:#bb44ff"></span>
+          <span class="btn-icon" style="color:{% if active=='shorts' %}#bb44ff{% else %}var(--white){% endif %}">⚡</span>
+          <span class="btn-label" style="color:{% if active=='shorts' %}#bb44ff{% else %}var(--white){% endif %}">SHORTS</span>
+        </a>
       {% else %}
         <!-- PUBLIC MENU -->
         <a href="/register" class="pixel-btn green {% if active=='register' %}active{% endif %}">
@@ -67,6 +72,16 @@
           <span class="btn-stripe"></span>
           <span class="btn-icon">◈</span>
           <span class="btn-label">PRODUÇÕES</span>
+        </a>
+        <a href="/shorts" class="pixel-btn yellow {% if active=='shorts' %}active{% endif %}">
+          <span class="btn-stripe"></span>
+          <span class="btn-icon">⚡</span>
+          <span class="btn-label">SHORTS</span>
+        </a>
+        <a href="/shorts" class="pixel-btn" style="border-color:#bb44ff;{% if active=='shorts' %}background:var(--hover){% endif %}" {% if active!='shorts' %}{% endif %}>
+          <span class="btn-stripe" style="background:#bb44ff"></span>
+          <span class="btn-icon" style="color:{% if active=='shorts' %}#bb44ff{% else %}var(--white){% endif %}">⚡</span>
+          <span class="btn-label" style="color:{% if active=='shorts' %}#bb44ff{% else %}var(--white){% endif %}">SHORTS</span>
         </a>
       {% endif %}
     </nav>
