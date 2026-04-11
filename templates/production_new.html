@@ -1,13 +1,36 @@
 {% extends "base.html" %}
 {% block title %}NOVA PRODUÇÃO{% endblock %}
 {% block header_icon %}<span style="color:var(--red)">▶</span>{% endblock %}
-{% block header_title %}<span style="color:var(--red)">NOVA PRODUÇÃO</span>{% endblock %}
+{% block header_title %}<span style="color:var(--red)">NOVA PRODUÇÃO / SHORT</span>{% endblock %}
 
 {% block content %}
-<div style="max-width:580px;margin:0 auto">
-  <div style="margin-bottom:12px">
-    <span class="section-title red">◆ INICIAR NOVA PRODUÇÃO</span>
+<div style="max-width:600px;margin:0 auto">
+
+  <!-- ── Tab switcher ──────────────────────────────────── -->
+  <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid var(--border2)">
+    <a href="/productions/new?tab=producao"
+       style="padding:11px 24px;font-size:11px;letter-spacing:1px;text-decoration:none;
+              border:2px solid {% if tab=='producao' %}var(--red){% else %}var(--border2){% endif %};
+              border-bottom:none;
+              background:{% if tab=='producao' %}var(--card){% else %}var(--card2){% endif %};
+              color:{% if tab=='producao' %}var(--r-soft){% else %}var(--gray2){% endif %};
+              position:relative;top:2px">
+      ▶ &nbsp;PRODUÇÃO
+    </a>
+    <a href="/productions/new?tab=short"
+       style="padding:11px 24px;font-size:11px;letter-spacing:1px;text-decoration:none;
+              border:2px solid {% if tab=='short' %}var(--yellow){% else %}var(--border2){% endif %};
+              border-bottom:none;
+              background:{% if tab=='short' %}var(--card){% else %}var(--card2){% endif %};
+              color:{% if tab=='short' %}var(--y-soft){% else %}var(--gray2){% endif %};
+              position:relative;top:2px">
+      ⚡ &nbsp;SHORT
+    </a>
   </div>
+
+
+  <!-- ══ TAB PRODUÇÃO ════════════════════════════════════ -->
+  {% if tab == 'producao' %}
 
   <div class="form-card" style="border-color:var(--red);box-shadow:6px 6px 0 var(--r-dark)">
     <div class="form-header" style="background:var(--red)">
@@ -16,12 +39,12 @@
       <span style="margin-left:auto;font-size:10px;opacity:.7">* OBRIGATÓRIO</span>
     </div>
     <div class="form-body">
-      <form method="POST" action="/productions/new">
+      <form method="POST" action="/productions/new?tab=producao">
 
         <div class="field-group">
           <label class="field-label required">◆ TÍTULO DO ROTEIRO</label>
           <input class="pixel-input" type="text" name="title"
-                 placeholder="Ex: Minecraft SMP S2 EP05..."
+                 placeholder="Ex: Silver SMP S2 EP05..."
                  value="{{ request.form.get('title','') }}" required/>
         </div>
 
@@ -46,20 +69,82 @@
         </div>
 
         <div class="btn-row">
-          <button type="submit" class="action-btn" style="border-color:var(--red);color:var(--r-soft);position:relative">
+          <button type="submit" class="action-btn"
+                  style="border-color:var(--red);color:var(--r-soft);position:relative">
             <span style="position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--red)"></span>
             ▶ INICIAR PRODUÇÃO
           </button>
-          <a href="/register" class="action-btn gray-btn">← REGRAVAÇÃO</a>
+          <a href="/productions" class="action-btn gray-btn">← VOLTAR</a>
         </div>
       </form>
 
       {% if msg %}
         <div class="status-msg {{ msg_type }}">
-          {% if msg_type == 'success' %}✔{% else %}⚠{% endif %} &nbsp;{{ msg }}
+          {% if msg_type=='success' %}✔{% else %}⚠{% endif %} &nbsp;{{ msg }}
         </div>
       {% endif %}
     </div>
   </div>
+
+
+  <!-- ══ TAB SHORT ═══════════════════════════════════════ -->
+  {% else %}
+
+  <div class="form-card" style="border-color:var(--yellow);box-shadow:6px 6px 0 var(--y-dark)">
+    <div class="form-header" style="background:var(--yellow)">
+      <span>⚡</span>
+      <span>DADOS DO SHORT</span>
+      <span style="margin-left:auto;font-size:10px;opacity:.7">* OBRIGATÓRIO</span>
+    </div>
+    <div class="form-body">
+      <form method="POST" action="/shorts/new?from=production_new">
+        <input type="hidden" name="from_prod" value="1"/>
+
+        <div class="field-group">
+          <label class="field-label required">◆ TÍTULO DO SHORT</label>
+          <input class="pixel-input" type="text" name="title"
+                 placeholder="Ex: Silver no Servidor de Skibidi..."
+                 value="{{ request.form.get('title','') }}" required/>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label required">◆ PRODUTOR</label>
+          <input class="pixel-input" type="text" name="producer"
+                 placeholder="Seu nome..."
+                 value="{{ request.form.get('producer','') }}" required/>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">◆ OBSERVAÇÕES <span style="color:var(--gray2)">(opcional)</span></label>
+          <textarea class="pixel-textarea" name="notes"
+                    placeholder="Notas sobre este short...">{{ request.form.get('notes','') }}</textarea>
+        </div>
+
+        <div style="margin-top:10px;padding:10px 12px;background:var(--card2);
+                    border-left:3px solid var(--yellow);font-size:10px;color:var(--gray2)">
+          ⚡ O início é registrado automaticamente agora.<br/>
+          Quando terminar clique em <strong style="color:var(--gray2)">✔ FIM</strong> na lista de produções.
+        </div>
+
+        <div class="btn-row" style="margin-top:16px">
+          <button type="submit" class="action-btn"
+                  style="border-color:var(--yellow);color:var(--y-soft);position:relative">
+            <span style="position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--yellow)"></span>
+            ⚡ INICIAR SHORT
+          </button>
+          <a href="/productions" class="action-btn gray-btn">← VOLTAR</a>
+        </div>
+      </form>
+
+      {% if msg %}
+        <div class="status-msg {{ msg_type }}">
+          {% if msg_type=='success' %}✔{% else %}⚠{% endif %} &nbsp;{{ msg }}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% endif %}
+
 </div>
 {% endblock %}
