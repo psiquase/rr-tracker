@@ -71,6 +71,7 @@
         <tr>
           <th>#</th><th>PRODUTOR</th><th>PROJETO</th>
           <th>QTDE</th><th>MOTIVO</th><th>DESCRIÇÃO</th><th>DATA / HORA</th>
+          {% if is_admin %}<th></th>{% endif %}
         </tr>
       </thead>
       <tbody>
@@ -83,6 +84,18 @@
           <td>{{ r.reason }}</td>
           <td style="font-size:10px;color:var(--gray2)">{{ r.description or '—' }}</td>
           <td style="font-size:10px;white-space:nowrap">{{ r.created_at[:16] }}</td>
+          {% if is_admin %}
+          <td>
+            <form method="POST" action="/records/{{ r.id }}/delete" style="margin:0"
+                  onsubmit="return confirm('Deletar este registro?')">
+              <button type="submit"
+                      style="background:none;border:1px solid var(--r-dark);color:var(--r-dark);
+                             padding:3px 8px;cursor:pointer;font-family:var(--font-pixel);font-size:10px">
+                ✕
+              </button>
+            </form>
+          </td>
+          {% endif %}
         </tr>
         {% endfor %}
       </tbody>
