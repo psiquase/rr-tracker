@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>◆ RR TRACKER — {% block title %}{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ░░░░ SCANLINE OVERLAY ░░░░ -->
+<div class="scanlines" aria-hidden="true"></div>
+
+<!-- ░░░░ LAYOUT ░░░░ -->
+<div class="layout">
+
+  <!-- ══ SIDEBAR ══════════════════════════════════════════ -->
+  <aside class="sidebar">
+
+    <!-- Logo -->
+    <div class="logo-block">
+      <div class="logo-inner">
+        <div class="logo-bar"></div>
+        <span class="logo-title">◆ RR TRACKER ◆</span>
+        <span class="logo-sub">SISTEMA DE REGRAVAÇÔES</span>
+        <span class="logo-ver">v2.0 · WEB EDITION</span>
+      </div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <!-- Nav -->
+    <nav class="nav">
+      <a href="/dashboard" class="pixel-btn blue {% if active=='dashboard' %}active{% endif %}">
+        <span class="btn-stripe"></span>
+        <span class="btn-icon">◈</span>
+        <span class="btn-label">DASHBOARD</span>
+      </a>
+      <a href="/register" class="pixel-btn green {% if active=='register' %}active{% endif %}">
+        <span class="btn-stripe"></span>
+        <span class="btn-icon">✚</span>
+        <span class="btn-label">REGISTRAR</span>
+      </a>
+      <a href="/reports" class="pixel-btn yellow {% if active=='reports' %}active{% endif %}">
+        <span class="btn-stripe"></span>
+        <span class="btn-icon">⚑</span>
+        <span class="btn-label">RELATÓRIOS</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-divider"></div>
+
+    <!-- Mini stat -->
+    <div class="mini-stat" id="mini-stat-block">
+      <div class="mini-stat-label">◆ TOTAL GERAL</div>
+      <div class="mini-stat-value" id="mini-total">—</div>
+      <div class="mini-stat-sub">regravaçôes registradas</div>
+    </div>
+
+    <div class="sidebar-footer">
+      100% FREE · OPEN SOURCE<br/>
+      Flask · SQLite · Chart.js
+    </div>
+  </aside>
+
+  <!-- ══ MAIN ═════════════════════════════════════════════ -->
+  <main class="main-area">
+
+    <!-- Header bar -->
+    <header class="topbar">
+      <span class="topbar-title">{% block header_icon %}{% endblock %}&nbsp;{% block header_title %}{% endblock %}</span>
+      <span class="topbar-clock" id="clock"></span>
+    </header>
+
+    <div class="topbar-border"></div>
+
+    <!-- Page content -->
+    <div class="page-content">
+      {% block content %}{% endblock %}
+    </div>
+
+  </main>
+</div>
+
+<script>
+  // Clock
+  function tick(){
+    const n = new Date();
+    const pad = v => String(v).padStart(2,'0');
+    document.getElementById('clock').textContent =
+      `[ ${pad(n.getDate())}/${pad(n.getMonth()+1)}/${n.getFullYear()}  ${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())} ]`;
+  }
+  tick(); setInterval(tick, 1000);
+
+  // Mini-stat total
+  fetch('/api/chart-data').then(r=>r.json()).then(d=>{
+    // sum all producers
+    const total = d.producers.reduce((s,p)=>s+p.total, 0);
+    const el = document.getElementById('mini-total');
+    el.textContent = total;
+    el.style.color = total>=30 ? 'var(--red)' : total>=10 ? 'var(--yellow)' : 'var(--green)';
+  }).catch(()=>{});
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>
