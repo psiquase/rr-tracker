@@ -7,111 +7,152 @@
 
 {% set sc = prod.dl_color %}
 {% set sc_var = 'var(--green)' if sc=='green' else 'var(--yellow)' if sc=='yellow' else 'var(--red)' %}
-{% set status_labels = {'iniciado':'INICIADO','em_andamento':'EM ANDAMENTO','pausado':'PAUSADO','concluido':'CONCLUÍDO'} %}
-{% set status_colors = {'iniciado':'var(--blue)','em_andamento':'var(--green)','pausado':'var(--yellow)','concluido':'var(--gray2)'} %}
+{% set status_labels = {
+  'iniciado':    'INICIADO',
+  'em_andamento':'EM ANDAMENTO',
+  'pausado':     'PAUSADO',
+  'concluido':   'CONCLUÍDO'
+} %}
+{% set status_colors = {
+  'iniciado':    'var(--blue)',
+  'em_andamento':'var(--green)',
+  'pausado':     'var(--yellow)',
+  'concluido':   'var(--gray2)'
+} %}
 
-<!-- ── Status bar ───────────────────────────────────────── -->
-<div style="background:var(--panel);border:1px solid var(--border2);padding:12px 18px;
-            margin-bottom:18px;display:flex;flex-wrap:wrap;gap:16px;align-items:center">
+<!-- ── Top info bar ──────────────────────────────────────── -->
+<div style="background:var(--panel);border:1px solid var(--border2);
+            padding:14px 18px;margin-bottom:20px;
+            display:flex;flex-wrap:wrap;gap:20px;align-items:center">
 
   <div>
-    <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">PRODUTOR</div>
-    <div style="font-size:12px;color:var(--white)">{{ prod.producer }}</div>
+    <div style="font-size:9px;color:var(--gray2);margin-bottom:3px;letter-spacing:1px">PRODUTOR</div>
+    <div style="font-size:13px;color:var(--white);font-weight:bold">{{ prod.producer }}</div>
   </div>
 
+  <div style="width:1px;height:40px;background:var(--border2)"></div>
+
   <div>
-    <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">STATUS</div>
-    <div style="font-size:11px;color:{{ status_colors[prod.status] }};
-                border:1px solid {{ status_colors[prod.status] }};padding:2px 10px">
+    <div style="font-size:9px;color:var(--gray2);margin-bottom:3px;letter-spacing:1px">STATUS</div>
+    <span style="font-size:11px;color:{{ status_colors[prod.status] }};
+                 border:1px solid {{ status_colors[prod.status] }};padding:3px 12px">
       {{ status_labels[prod.status] }}
-    </div>
+    </span>
   </div>
 
-  <div>
-    <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">ARCOS CONCLUÍDOS</div>
-    <div style="font-size:20px;font-family:var(--font-vt);color:{{ sc_var }}">
-      {{ prod.arcs_done_count }}/{{ prod.total_arcs }}
-    </div>
-  </div>
+  <div style="width:1px;height:40px;background:var(--border2)"></div>
 
   <div>
-    <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">CARACTERES HOJE</div>
-    <div style="font-size:20px;font-family:var(--font-vt);
-                color:{% if prod.today_chars >= 5000 %}var(--green){% elif prod.today_chars > 0 %}var(--yellow){% else %}var(--gray2){% endif %}">
-      {{ prod.today_chars }}
+    <div style="font-size:9px;color:var(--gray2);margin-bottom:3px;letter-spacing:1px">INÍCIO</div>
+    <div style="font-size:12px;color:var(--white)">{{ prod.started_at[:10] }}</div>
+  </div>
+
+  {% if prod.status == 'concluido' and prod.completed_at %}
+  <div style="width:1px;height:40px;background:var(--border2)"></div>
+  <div>
+    <div style="font-size:9px;color:var(--gray2);margin-bottom:3px;letter-spacing:1px">CONCLUSÃO</div>
+    <div style="font-size:12px;color:var(--green)">{{ prod.completed_at[:10] }}</div>
+  </div>
+  {% endif %}
+
+  <div style="width:1px;height:40px;background:var(--border2)"></div>
+
+  <div>
+    <div style="font-size:9px;color:var(--gray2);margin-bottom:3px;letter-spacing:1px">
+      {% if prod.status == 'concluido' %}DURAÇÃO TOTAL{% else %}DIAS EM CURSO{% endif %}
+    </div>
+    <div style="display:flex;align-items:baseline;gap:4px">
+      <span style="font-family:var(--font-vt);font-size:32px;color:{{ sc_var }};line-height:1">
+        {{ prod.duration_bdays }}
+      </span>
+      <span style="font-size:10px;color:var(--gray2)">dias úteis</span>
     </div>
   </div>
 
   {% if is_admin %}
+  <div style="width:1px;height:40px;background:var(--border2)"></div>
   <div>
-    <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">DIAS ÚTEIS</div>
-    <div style="font-size:20px;font-family:var(--font-vt);color:{{ sc_var }}">{{ prod.bdays }}</div>
-  </div>
-  <div>
-    <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">PRAZO</div>
+    <div style="font-size:9px;color:var(--gray2);margin-bottom:3px;letter-spacing:1px">PRAZO (4 d.u.)</div>
     {% if prod.status == 'concluido' %}
       <span style="color:var(--green);font-size:11px">✔ CONCLUÍDO</span>
     {% elif prod.bdays <= 4 %}
-      <span style="color:{{ sc_var }};font-size:11px">{{ 4 - prod.bdays }} dias restantes</span>
+      <span style="color:{{ sc_var }};font-size:11px">{{ 4 - prod.bdays }}d restantes</span>
     {% else %}
-      <span style="color:var(--red);font-size:11px">⚠ {{ prod.bdays - 4 }}d atraso</span>
+      <span style="color:var(--red);font-size:11px">⚠ +{{ prod.bdays - 4 }}d atraso</span>
     {% endif %}
   </div>
   {% endif %}
 
-  <!-- Action buttons -->
+  <!-- Status action buttons -->
   <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
-    {% if prod.status not in ('em_andamento', 'iniciado') %}
+    {% if prod.status not in ('em_andamento','iniciado') %}
       <form method="POST" action="/productions/{{ prod.id }}/status" style="margin:0">
         <input type="hidden" name="status" value="em_andamento"/>
-        <button type="submit" class="action-btn green-btn" style="font-size:10px;padding:6px 14px">▶ RETOMAR</button>
+        <button type="submit" class="action-btn green-btn" style="font-size:10px;padding:7px 16px">
+          ▶ RETOMAR
+        </button>
       </form>
     {% endif %}
     {% if prod.status not in ('pausado','concluido') %}
       <form method="POST" action="/productions/{{ prod.id }}/status" style="margin:0">
         <input type="hidden" name="status" value="pausado"/>
-        <button type="submit" class="action-btn" style="font-size:10px;padding:6px 14px;border-color:var(--yellow);color:var(--yellow)">⏸ PAUSAR</button>
+        <button type="submit" class="action-btn" style="font-size:10px;padding:7px 16px;border-color:var(--yellow);color:var(--yellow)">
+          ⏸ PAUSAR
+        </button>
       </form>
     {% endif %}
     {% if prod.status != 'concluido' %}
       <form method="POST" action="/productions/{{ prod.id }}/status" style="margin:0">
         <input type="hidden" name="status" value="concluido"/>
-        <button type="submit" class="action-btn" style="font-size:10px;padding:6px 14px;border-color:var(--gray);color:var(--gray2)">✔ CONCLUIR</button>
+        <button type="submit" class="action-btn" style="font-size:10px;padding:7px 16px;border-color:var(--gray);color:var(--gray2)">
+          ✔ CONCLUIR
+        </button>
       </form>
     {% endif %}
     {% if is_admin %}
       <form method="POST" action="/productions/{{ prod.id }}/delete" style="margin:0"
             onsubmit="return confirm('Deletar esta produção?')">
-        <button type="submit" class="action-btn" style="font-size:10px;padding:6px 14px;border-color:var(--r-dark);color:var(--r-dark)">✕</button>
+        <button type="submit" class="action-btn" style="font-size:10px;padding:7px 16px;border-color:var(--r-dark);color:var(--r-dark)">
+          ✕ DELETAR
+        </button>
       </form>
     {% endif %}
   </div>
+
 </div>
 
 
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+<!-- ── Arc checklist ─────────────────────────────────────── -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
 
-  <!-- ── LEFT: Arc checklist ──────────────────────────── -->
   <div>
     <div style="margin-bottom:10px"><span class="section-title red">◆ CHECKLIST DE ARCOS</span></div>
 
-    <!-- Arc progress bar -->
+    <!-- Progress bar -->
     <div style="background:var(--card);border:1px solid var(--border2);padding:14px 16px;margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-        <span style="font-size:10px;color:var(--gray2)">PROGRESSO</span>
-        <span style="font-size:12px;color:{{ sc_var }}">{{ prod.arcs_done_count }}/{{ prod.total_arcs }} arcos</span>
+        <span style="font-size:10px;color:var(--gray2);letter-spacing:1px">PROGRESSO</span>
+        <span style="font-family:var(--font-vt);font-size:20px;color:{{ sc_var }}">
+          {{ prod.arcs_done_count }}/{{ prod.total_arcs }}
+        </span>
       </div>
-      <div style="background:var(--card2);height:12px;border:1px solid var(--border2)">
+      <div style="background:var(--card2);height:14px;border:1px solid var(--border2)">
         <div style="height:100%;background:{{ sc_var }};width:{{ prod.arc_pct }}%;transition:width .4s"></div>
       </div>
-      <div style="font-size:9px;color:var(--gray2);margin-top:5px;text-align:right">{{ prod.arc_pct }}% concluído</div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px">
+        <span style="font-size:9px;color:var(--gray2)">
+          {{ prod.total_arcs - prod.arcs_done_count }} arco(s) restante(s)
+        </span>
+        <span style="font-size:9px;color:{{ sc_var }}">{{ prod.arc_pct }}%</span>
+      </div>
     </div>
 
     <!-- Arc list -->
     <div style="background:var(--card);border:1px solid var(--border2)">
       {% for i in range(1, prod.total_arcs + 1) %}
         {% set done = i in prod.arcs_done_list %}
-        <div style="display:flex;align-items:center;padding:10px 14px;
+        <div style="display:flex;align-items:center;
+                    padding:11px 14px;
                     border-bottom:{% if not loop.last %}1px solid var(--border){% else %}none{% endif %};
                     background:{% if done %}rgba(0,230,118,.04){% else %}transparent{% endif %}">
           <form method="POST" action="/productions/{{ prod.id }}/arc"
@@ -119,20 +160,21 @@
             <input type="hidden" name="arc" value="{{ i }}"/>
             <input type="hidden" name="action" value="{% if done %}uncheck{% else %}check{% endif %}"/>
             <button type="submit"
-                    style="background:none;border:2px solid {% if done %}var(--green){% else %}var(--border2){% endif %};
-                           width:22px;height:22px;cursor:pointer;
+                    style="background:none;
+                           border:2px solid {% if done %}var(--green){% else %}var(--border2){% endif %};
+                           width:24px;height:24px;cursor:pointer;
                            color:{% if done %}var(--green){% else %}transparent{% endif %};
-                           font-size:13px;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+                           font-size:14px;flex-shrink:0;
+                           display:flex;align-items:center;justify-content:center">
               {% if done %}✔{% endif %}
             </button>
-            <div style="flex:1">
-              <span style="font-size:12px;
-                           color:{% if done %}var(--green){% else %}var(--white){% endif %};
-                           {% if done %}text-decoration:line-through;opacity:.7{% endif %}">
-                ARCO {{ i }}
-              </span>
-            </div>
-            <span style="font-size:9px;color:{% if done %}var(--g-dark){% else %}var(--gray){% endif %}">
+            <span style="font-size:12px;flex:1;
+                         color:{% if done %}var(--green){% else %}var(--white){% endif %};
+                         {% if done %}opacity:.7{% endif %}">
+              ARCO {{ i }}
+            </span>
+            <span style="font-size:9px;letter-spacing:1px;
+                         color:{% if done %}var(--g-dark){% else %}var(--gray){% endif %}">
               {% if done %}✔ GRAVADO{% else %}PENDENTE{% endif %}
             </span>
           </form>
@@ -142,99 +184,90 @@
   </div>
 
 
-  <!-- ── RIGHT: Chars progress + log ─────────────────── -->
+  <!-- ── Right: timing info ─────────────────────────────── -->
   <div>
-    <div style="margin-bottom:10px"><span class="section-title blue">◆ PROGRESSO DE CARACTERES</span></div>
+    <div style="margin-bottom:10px"><span class="section-title blue">◆ INFORMAÇÕES DE TEMPO</span></div>
 
-    <!-- Progress cards -->
-    <div style="background:var(--card);border:1px solid var(--border2);padding:14px 16px;margin-bottom:12px">
+    <div style="background:var(--card);border:1px solid var(--border2);padding:18px">
 
-      <!-- Total -->
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-        <span style="font-size:10px;color:var(--gray2)">TOTAL ESCRITO</span>
-        <span style="font-size:12px;color:var(--blue)">{{ prod.total_chars }} / 20.000</span>
-      </div>
-      <div style="background:var(--card2);height:10px;border:1px solid var(--border2);margin-bottom:14px">
-        <div style="height:100%;background:var(--blue);width:{{ prod.chars_pct }}%"></div>
-      </div>
+      {% if prod.status == 'concluido' %}
+        <!-- Completed: show full timing -->
+        <div style="text-align:center;padding:20px 0">
+          <div style="font-size:10px;color:var(--gray2);letter-spacing:2px;margin-bottom:8px">
+            TEMPO TOTAL DE PRODUÇÃO
+          </div>
+          <div style="font-family:var(--font-vt);font-size:72px;
+                      color:{% if prod.duration_bdays <= 4 %}var(--green){% elif prod.duration_bdays <= 6 %}var(--yellow){% else %}var(--red){% endif %};
+                      line-height:1">
+            {{ prod.duration_bdays }}
+          </div>
+          <div style="font-size:13px;color:var(--gray2);margin-top:4px">dias úteis</div>
+          <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border2);
+                      display:flex;justify-content:space-around">
+            <div style="text-align:center">
+              <div style="font-size:9px;color:var(--gray2);margin-bottom:4px">INÍCIO</div>
+              <div style="font-size:11px;color:var(--white)">{{ prod.started_at[:10] }}</div>
+            </div>
+            <div style="font-size:20px;color:var(--border2);padding-top:8px">→</div>
+            <div style="text-align:center">
+              <div style="font-size:9px;color:var(--gray2);margin-bottom:4px">CONCLUSÃO</div>
+              <div style="font-size:11px;color:var(--green)">{{ prod.completed_at[:10] }}</div>
+            </div>
+          </div>
+        </div>
 
-      <!-- Hoje -->
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-        <span style="font-size:10px;color:var(--gray2)">HOJE  <span style="color:var(--border2)">(meta 5.000)</span></span>
-        <span style="font-size:12px;
-                     color:{% if prod.today_chars >= 5000 %}var(--green){% elif prod.today_chars > 0 %}var(--yellow){% else %}var(--gray2){% endif %}">
-          {{ prod.today_chars }} / 5.000
-          {% if prod.today_chars >= 5000 %} ✔{% endif %}
-        </span>
-      </div>
-      <div style="background:var(--card2);height:8px;border:1px solid var(--border2)">
-        <div style="height:100%;
-                    background:{% if prod.today_chars >= 5000 %}var(--green){% elif prod.today_chars > 0 %}var(--yellow){% else %}var(--border2){% endif %};
-                    width:{{ prod.today_pct }}%"></div>
-      </div>
+      {% elif prod.status == 'pausado' %}
+        <div style="text-align:center;padding:20px 0">
+          <div style="font-size:28px;color:var(--yellow);margin-bottom:8px">⏸</div>
+          <div style="font-size:11px;color:var(--yellow);letter-spacing:1px;margin-bottom:16px">PRODUÇÃO PAUSADA</div>
+          <div style="font-size:9px;color:var(--gray2);letter-spacing:1px">DIAS ÚTEIS DECORRIDOS</div>
+          <div style="font-family:var(--font-vt);font-size:52px;color:var(--yellow);line-height:1.1">
+            {{ prod.duration_bdays }}
+          </div>
+          <div style="font-size:10px;color:var(--gray2);margin-top:4px">desde {{ prod.started_at[:10] }}</div>
+        </div>
+
+      {% else %}
+        <!-- In progress -->
+        <div style="text-align:center;padding:20px 0">
+          <div style="font-size:9px;color:var(--gray2);letter-spacing:2px;margin-bottom:8px">
+            EM PRODUÇÃO — DIAS ÚTEIS
+          </div>
+          <div style="font-family:var(--font-vt);font-size:72px;
+                      color:{{ sc_var }};line-height:1">
+            {{ prod.duration_bdays }}
+          </div>
+          <div style="font-size:10px;color:var(--gray2);margin-top:4px">
+            desde {{ prod.started_at[:10] }}
+          </div>
+          {% if prod.bdays <= 4 %}
+            <div style="margin-top:12px;font-size:11px;color:var(--green)">
+              ✔ dentro do prazo ({{ 4 - prod.bdays }}d restantes)
+            </div>
+          {% else %}
+            <div style="margin-top:12px;font-size:11px;color:var(--red)">
+              ⚠ prazo excedido em {{ prod.bdays - 4 }} dia(s)
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+
     </div>
 
-    <!-- Log form -->
-    <div style="margin-bottom:10px"><span class="section-title green">◆ REGISTRAR CARACTERES DO DIA</span></div>
-    <div style="background:var(--card);border:2px solid var(--green);margin-bottom:14px">
-      <div style="background:var(--green);padding:8px 14px;color:var(--bg);font-size:10px;font-weight:bold">
-        ✚ ADICIONAR PROGRESSO
+    {% if prod.notes %}
+    <div style="margin-top:14px">
+      <div style="margin-bottom:8px"><span class="section-title yellow">◆ OBSERVAÇÕES</span></div>
+      <div style="background:var(--card);border:1px solid var(--border2);padding:14px;
+                  font-size:11px;color:var(--gray2);line-height:1.7">
+        {{ prod.notes }}
       </div>
-      <form method="POST" action="/productions/{{ prod.id }}/log" style="padding:14px 16px">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-          <div>
-            <label style="display:block;font-size:9px;color:var(--gray2);margin-bottom:4px">DATA</label>
-            <input class="pixel-input" type="date" name="log_date" value="{{ today }}" style="padding:6px 10px"/>
-          </div>
-          <div>
-            <label style="display:block;font-size:9px;color:var(--gray2);margin-bottom:4px">CARACTERES</label>
-            <input class="pixel-input" type="number" name="chars" min="0" placeholder="0" style="padding:6px 10px"/>
-          </div>
-        </div>
-        <div style="margin-bottom:10px">
-          <label style="display:block;font-size:9px;color:var(--gray2);margin-bottom:4px">NOTAS (opcional)</label>
-          <input class="pixel-input" type="text" name="notes" placeholder="O que foi escrito hoje..." style="padding:6px 10px"/>
-        </div>
-        <button type="submit" class="action-btn green-btn" style="font-size:11px;padding:8px 18px">✔ SALVAR</button>
-      </form>
     </div>
-
-    <!-- Daily history -->
-    <div style="margin-bottom:10px"><span class="section-title yellow">◆ HISTÓRICO DIÁRIO</span></div>
-    {% if daily %}
-      <div style="background:var(--card);border:1px solid var(--border2)">
-        <div style="background:var(--card2);padding:8px 14px;display:grid;
-                    grid-template-columns:1fr 1fr 2fr auto;font-size:9px;
-                    color:var(--yellow);border-bottom:2px solid var(--yellow)">
-          <span>DATA</span><span>CHARS</span><span>NOTAS</span><span></span>
-        </div>
-        {% for d in daily %}
-          <div style="padding:8px 14px;display:grid;grid-template-columns:1fr 1fr 2fr auto;
-                      border-bottom:1px solid var(--border);font-size:11px;align-items:center;gap:8px">
-            <span style="color:var(--white)">{{ d.log_date }}</span>
-            <span style="color:{% if d.chars_written >= 5000 %}var(--green){% elif d.chars_written > 0 %}var(--yellow){% else %}var(--gray2){% endif %}">
-              {{ d.chars_written }}{% if d.chars_written >= 5000 %} ✔{% endif %}
-            </span>
-            <span style="color:var(--gray2);font-size:10px">{{ d.notes or '—' }}</span>
-            <form method="POST" action="/productions/{{ prod.id }}/log/{{ d.id }}/delete"
-                  style="margin:0" onsubmit="return confirm('Deletar este registro?')">
-              <button type="submit"
-                      style="background:none;border:1px solid var(--r-dark);color:var(--r-dark);
-                             padding:2px 7px;cursor:pointer;font-family:var(--font-pixel);font-size:10px">
-                ✕
-              </button>
-            </form>
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="empty-state" style="padding:20px">⚠ Nenhum progresso registrado ainda.</div>
     {% endif %}
 
   </div>
 </div>
 
-<div style="margin-top:14px">
+<div style="margin-top:16px">
   <a href="/productions" class="action-btn gray-btn" style="font-size:11px">← VOLTAR</a>
 </div>
 
