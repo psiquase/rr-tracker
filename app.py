@@ -6,17 +6,51 @@
 """
 
 import os
-import io
 import json
 import sqlite3
+from functools import wraps
 from datetime import datetime, timedelta, date
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, send_file
+from flask import (Flask, render_template, request, jsonify,
+                   redirect, url_for, session)
 
 app = Flask(__name__)
 
-# ── Database path (writable on Render's ephemeral disk) ──────
+# ── Secret key for sessions (change this in production!) ─────
+app.secret_key = os.environ.get("SECRET_KEY", "rr-tracker-pixel-2026")
+
+# ── Admin password (set via env var ADMIN_PASSWORD on Render) ─
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "prota2026")
+
+# ── Server-side valid session tokens (in-memory) ─────────────
+import secrets as _secrets
+VALID_TOKENS: set = set()
+
+# ── Database path ─────────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH  = os.path.join(BASE_DIR, "data", "rerecording.db")
+
+
+# ── Inject is_admin into every template ──────────────────────
+@app.context_processor
+def inject_auth():
+    return dict(is_admin=is_admin())
+
+
+# ═══════════════════════════════════════════
+#  AUTH HELPERS
+# ═══════════════════════════════════════════
+
+def is_admin():
+    token = session.get("token")
+    return token is not None and token in VALID_TOKENS
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not is_admin():
+            return redirect(url_for("login", next=request.path))
+        return f(*args, **kwargs)
+    return decorated
 
 
 # ═══════════════════════════════════════════
@@ -141,10 +175,44 @@ def db_trend():
 
 @app.route("/")
 def index():
-    return redirect(url_for("dashboard"))
+    # Public users land on register; admins land on dashboard
+    if is_admin():
+        return redirect(url_for("dashboard"))
+    return redirect(url_for("register"))
 
+
+# ── AUTH ──────────────────────────────────
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error    = None
+    next_url = request.args.get("next", "/dashboard")
+    if request.method == "POST":
+        pwd      = request.form.get("password", "")
+        next_url = request.form.get("next", "/dashboard")
+        if pwd == ADMIN_PASSWORD:
+            token = _secrets.token_hex(32)
+            VALID_TOKENS.add(token)
+            session["token"] = token
+            return redirect(next_url)
+        error = "Senha incorreta. Tente novamente."
+    return render_template("login.html", error=error,
+                           next=next_url, active=None)
+
+
+@app.route("/logout")
+def logout():
+    token = session.get("token")
+    if token and token in VALID_TOKENS:
+        VALID_TOKENS.discard(token)
+    session.clear()
+    return redirect(url_for("register"))
+
+
+# ── PROTECTED VIEWS ───────────────────────
 
 @app.route("/dashboard")
+@login_required
 def dashboard():
     stats      = db_stats()
     reasons    = db_reason_dist()
@@ -200,6 +268,7 @@ def register():
 
 
 @app.route("/reports")
+@login_required
 def reports():
     weeks_back   = int(request.args.get("w", 0))
     rows, mon, sun = db_weekly(weeks_back)
@@ -220,6 +289,7 @@ def reports():
 
 # ── JSON API (used by Chart.js calls) ────────────────────────
 @app.route("/api/chart-data")
+@login_required
 def chart_data():
     return jsonify({
         "reasons":   db_reason_dist(),
@@ -307,6 +377,7 @@ def enrich_production(p):
 # ═══════════════════════════════════════════
 
 @app.route("/productions")
+@login_required
 def productions():
     with get_db() as c:
         rows = c.execute("SELECT * FROM productions ORDER BY started_at DESC").fetchall()
@@ -326,6 +397,7 @@ def productions():
 
 
 @app.route("/productions/new", methods=["GET", "POST"])
+@login_required
 def production_new():
     msg = None
     msg_type = None
@@ -361,6 +433,7 @@ def production_new():
 
 
 @app.route("/productions/<int:pid>")
+@login_required
 def production_detail(pid):
     with get_db() as c:
         p = c.execute("SELECT * FROM productions WHERE id=?", (pid,)).fetchone()
@@ -380,6 +453,7 @@ def production_detail(pid):
 
 
 @app.route("/productions/<int:pid>/arc", methods=["POST"])
+@login_required
 def production_arc(pid):
     arc_num = int(request.form.get("arc", 0))
     action  = request.form.get("action", "toggle")  # toggle | check | uncheck
@@ -418,6 +492,7 @@ def production_arc(pid):
 
 
 @app.route("/productions/<int:pid>/status", methods=["POST"])
+@login_required
 def production_status(pid):
     new_status = request.form.get("status", "")
     valid = ("iniciado", "em_andamento", "pausado", "concluido")
@@ -444,6 +519,7 @@ def production_status(pid):
 
 
 @app.route("/productions/<int:pid>/log", methods=["POST"])
+@login_required
 def production_log(pid):
     chars = request.form.get("chars", "0").strip()
     notes = request.form.get("notes", "").strip()
@@ -476,6 +552,7 @@ def production_log(pid):
 
 
 @app.route("/productions/<int:pid>/delete", methods=["POST"])
+@login_required
 def production_delete(pid):
     with get_db() as c:
         c.execute("DELETE FROM production_daily WHERE production_id=?", (pid,))
@@ -484,6 +561,7 @@ def production_delete(pid):
 
 
 @app.route("/reports/download")
+@login_required
 def reports_download():
     from docx import Document as DocxDocument
     from docx.shared import Pt, RGBColor, Cm, Inches
