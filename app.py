@@ -6,10 +6,11 @@
 """
 
 import os
+import io
 import json
 import sqlite3
 from datetime import datetime, timedelta, date
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, send_file
 
 app = Flask(__name__)
 
@@ -480,6 +481,249 @@ def production_delete(pid):
         c.execute("DELETE FROM production_daily WHERE production_id=?", (pid,))
         c.execute("DELETE FROM productions WHERE id=?", (pid,))
     return redirect(url_for("productions"))
+
+
+@app.route("/reports/download")
+def reports_download():
+    from docx import Document as DocxDocument
+    from docx.shared import Pt, RGBColor, Cm, Inches
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.enum.table import WD_ALIGN_VERTICAL
+    from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
+
+    weeks_back = int(request.args.get("w", 0))
+    rows, mon, sun = db_weekly(weeks_back)
+    for r in rows:
+        r["tag"] = ("high"   if r["count"] >= 5 else
+                    "medium" if r["count"] >= 3 else "low")
+
+    total    = sum(r["count"] for r in rows)
+    st       = db_stats()
+    prods_by = db_by_producer()
+
+    doc = DocxDocument()
+
+    # ── Page margins ──────────────────────────────────────
+    for section in doc.sections:
+        section.top_margin    = Cm(2)
+        section.bottom_margin = Cm(2)
+        section.left_margin   = Cm(2.5)
+        section.right_margin  = Cm(2.5)
+
+    # ── Helper: set paragraph shading ─────────────────────
+    def shade_para(para, hex_color):
+        pPr = para._p.get_or_add_pPr()
+        shd = OxmlElement('w:shd')
+        shd.set(qn('w:val'), 'clear')
+        shd.set(qn('w:color'), 'auto')
+        shd.set(qn('w:fill'), hex_color)
+        pPr.append(shd)
+
+    def shade_cell(cell, hex_color):
+        tc = cell._tc
+        tcPr = tc.get_or_add_tcPr()
+        shd = OxmlElement('w:shd')
+        shd.set(qn('w:val'), 'clear')
+        shd.set(qn('w:color'), 'auto')
+        shd.set(qn('w:fill'), hex_color)
+        tcPr.append(shd)
+
+    def set_cell_border(cell, **kwargs):
+        tc = cell._tc
+        tcPr = tc.get_or_add_tcPr()
+        tcBorders = OxmlElement('w:tcBorders')
+        for edge in ('top','bottom','left','right'):
+            tag = OxmlElement(f'w:{edge}')
+            tag.set(qn('w:val'), kwargs.get(edge, {}).get('val','single'))
+            tag.set(qn('w:sz'),  str(kwargs.get(edge, {}).get('sz', 4)))
+            tag.set(qn('w:color'), kwargs.get(edge, {}).get('color','CCCCCC'))
+            tcBorders.append(tag)
+        tcPr.append(tcBorders)
+
+    # ═══════════════════════════════
+    # HEADER BLOCK
+    # ═══════════════════════════════
+    hdr = doc.add_paragraph()
+    hdr.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    shade_para(hdr, '0A0A1A')
+    run = hdr.add_run('◆  RE-RECORDING TRACKER  ◆')
+    run.font.name = 'Courier New'
+    run.font.size = Pt(20)
+    run.font.bold = True
+    run.font.color.rgb = RGBColor(0x40, 0xC4, 0xFF)
+
+    sub = doc.add_paragraph()
+    sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    shade_para(sub, '0A0A1A')
+    r2 = sub.add_run('RELATÓRIO SEMANAL DE REGRAVAÇÔES')
+    r2.font.name = 'Courier New'
+    r2.font.size = Pt(11)
+    r2.font.color.rgb = RGBColor(0x66, 0x66, 0x88)
+
+    period = doc.add_paragraph()
+    period.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    shade_para(period, '0D0D1C')
+    rp = period.add_run(f'Período: {mon.strftime("%d/%m/%Y")}  →  {sun.strftime("%d/%m/%Y")}   |   Gerado em: {datetime.now().strftime("%d/%m/%Y %H:%M")}')
+    rp.font.name = 'Courier New'
+    rp.font.size = Pt(9)
+    rp.font.color.rgb = RGBColor(0x40, 0xC4, 0xFF)
+
+    doc.add_paragraph()  # spacer
+
+    # ═══════════════════════════════
+    # SUMMARY CARDS ROW (table 3 cols)
+    # ═══════════════════════════════
+    def section_title(text, hex_color):
+        p = doc.add_paragraph()
+        r = p.add_run(f'  {text}  ')
+        r.font.name = 'Courier New'
+        r.font.size = Pt(10)
+        r.font.bold = True
+        r.font.color.rgb = RGBColor(0x08, 0x08, 0x10)
+        shade_para(p, hex_color)
+        doc.add_paragraph()
+
+    section_title('◆  RESUMO GERAL', '40C4FF')
+
+    tbl = doc.add_table(rows=2, cols=3)
+    tbl.style = 'Table Grid'
+    tbl.autofit = False
+
+    w3 = int(Inches(6.3) / 3)
+    for i, (label, val, color) in enumerate([
+        ('TOTAL REGRAVAÇÔES', str(total), '1A0A1A' if total > 20 else '0A1A0A'),
+        ('REGISTROS NA SEMANA', str(len(rows)), '0A0A1A'),
+        ('TOTAL GERAL', str(st['total']), '0A0A1A'),
+    ]):
+        cell_h = tbl.cell(0, i)
+        cell_v = tbl.cell(1, i)
+        shade_cell(cell_h, '111126')
+        shade_cell(cell_v, '0A0A1A')
+        ph = cell_h.paragraphs[0]
+        ph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        rh = ph.add_run(label)
+        rh.font.name = 'Courier New'; rh.font.size = Pt(8); rh.font.bold = True
+        rh.font.color.rgb = RGBColor(0x40, 0xC4, 0xFF)
+        pv = cell_v.paragraphs[0]
+        pv.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        rv = pv.add_run(val)
+        rv.font.name = 'Courier New'; rv.font.size = Pt(22); rv.font.bold = True
+        rv.font.color.rgb = (RGBColor(0xFF, 0x17, 0x44) if total > 20 else
+                             RGBColor(0xFF, 0xD7, 0x00) if total > 8 else
+                             RGBColor(0x00, 0xE6, 0x76))
+        for c in [cell_h, cell_v]:
+            c.width = w3
+
+    doc.add_paragraph()
+
+    # ═══════════════════════════════
+    # RECORDS TABLE
+    # ═══════════════════════════════
+    section_title('◆  REGRAVAÇÔES DA SEMANA', 'FFD700')
+
+    if rows:
+        t = doc.add_table(rows=1, cols=5)
+        t.style = 'Table Grid'
+        t.autofit = False
+
+        col_widths = [Inches(1.4), Inches(1.5), Inches(0.6), Inches(2.0), Inches(1.1)]
+        headers    = ['PRODUTOR', 'PROJETO', 'QTDE', 'MOTIVO', 'DATA/HORA']
+        hrow = t.rows[0]
+        for i, (h, w) in enumerate(zip(headers, col_widths)):
+            cell = hrow.cells[i]
+            cell.width = w
+            shade_cell(cell, '111126')
+            p = cell.paragraphs[0]
+            run = p.add_run(h)
+            run.font.name = 'Courier New'; run.font.size = Pt(8); run.font.bold = True
+            run.font.color.rgb = RGBColor(0xFF, 0xD7, 0x00)
+
+        tag_colors = {
+            'high':   ('220808', RGBColor(0xFF, 0xB0, 0xBE)),
+            'medium': ('201800', RGBColor(0xFF, 0xF0, 0xA0)),
+            'low':    ('081808', RGBColor(0xB0, 0xFF, 0xD4)),
+        }
+
+        for row in rows:
+            tr = t.add_row()
+            bg, fg = tag_colors[row['tag']]
+            vals = [row['producer'], row['project'],
+                    str(row['count']), row['reason'],
+                    row['created_at'][:16]]
+            for i, (v, w) in enumerate(zip(vals, col_widths)):
+                c = tr.cells[i]
+                c.width = w
+                shade_cell(c, bg)
+                p = c.paragraphs[0]
+                r = p.add_run(v)
+                r.font.name = 'Courier New'
+                r.font.size = Pt(9)
+                r.font.color.rgb = fg
+    else:
+        p = doc.add_paragraph('Nenhum registro encontrado para este período.')
+        p.runs[0].font.color.rgb = RGBColor(0x66, 0x66, 0x88)
+
+    doc.add_paragraph()
+
+    # ═══════════════════════════════
+    # BY PRODUCER TABLE
+    # ═══════════════════════════════
+    section_title('◆  TOTAL POR PRODUTOR', 'FF1744')
+
+    if prods_by:
+        t2 = doc.add_table(rows=1, cols=3)
+        t2.style = 'Table Grid'
+        t2.autofit = False
+        pw = [Inches(2.2), Inches(1.2), Inches(3.2)]
+        for i, (h, w) in enumerate(zip(['PRODUTOR','TOTAL','MOTIVO PRINCIPAL'], pw)):
+            c = t2.rows[0].cells[i]; c.width = w
+            shade_cell(c, '111126')
+            r = c.paragraphs[0].add_run(h)
+            r.font.name = 'Courier New'; r.font.size = Pt(8); r.font.bold = True
+            r.font.color.rgb = RGBColor(0xFF, 0x17, 0x44)
+
+        for pb in prods_by:
+            tr = t2.add_row()
+            total_p = pb['total']
+            bg = ('220808' if total_p >= 10 else '201800' if total_p >= 5 else '081808')
+            fg = (RGBColor(0xFF,0xB0,0xBE) if total_p >= 10 else
+                  RGBColor(0xFF,0xF0,0xA0) if total_p >= 5 else
+                  RGBColor(0xB0,0xFF,0xD4))
+            vals2 = [pb['producer'], str(pb['total']), pb.get('top_reason') or '—']
+            for i, (v, w) in enumerate(zip(vals2, pw)):
+                c = tr.cells[i]; c.width = w
+                shade_cell(c, bg)
+                r = c.paragraphs[0].add_run(v)
+                r.font.name = 'Courier New'; r.font.size = Pt(9); r.font.color.rgb = fg
+
+    doc.add_paragraph()
+
+    # ═══════════════════════════════
+    # FOOTER
+    # ═══════════════════════════════
+    footer_p = doc.add_paragraph()
+    footer_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    shade_para(footer_p, '0A0A1A')
+    rf = footer_p.add_run(f'◆  RR Tracker  |  Gerado automaticamente  |  {datetime.now().strftime("%d/%m/%Y %H:%M")}  ◆')
+    rf.font.name = 'Courier New'
+    rf.font.size = Pt(8)
+    rf.font.color.rgb = RGBColor(0x28, 0x28, 0x50)
+
+    # ── Save to buffer and send ────────────────────────────
+    buf = io.BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+
+    week_label = f"{mon.strftime('%d-%m')}_{sun.strftime('%d-%m-%Y')}"
+    filename   = f"relatorio_semanal_{week_label}.docx"
+
+    return send_file(
+        buf,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    )
 
 
 if __name__ == "__main__":
