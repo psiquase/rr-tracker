@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}PRODUÇÕES{% endblock %}
+{% block header_icon %}<span style="color:var(--red)">▶</span>{% endblock %}
+{% block header_title %}<span style="color:var(--red)">PRODUÇÕES — CONTROLE DE ROTEIROS</span>{% endblock %}
+
+{% block content %}
+
+<!-- ── Summary cards ─────────────────────────────────── -->
+<div style="margin-bottom:6px">
+  <span class="section-title red">◆ VISÃO GERAL</span>
+</div>
+<div class="cards-row" style="margin-bottom:24px">
+  <div class="stat-card blue">
+    <div class="stat-card-title">TOTAL</div>
+    <div class="stat-card-value" style="color:var(--blue)">{{ summary.total }}</div>
+    <div class="stat-card-sub">produções cadastradas</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-card-title">EM ANDAMENTO</div>
+    <div class="stat-card-value" style="color:var(--green)">{{ summary.andamento + summary.iniciado }}</div>
+    <div class="stat-card-sub">roteiros ativos</div>
+  </div>
+  <div class="stat-card yellow">
+    <div class="stat-card-title">PAUSADAS</div>
+    <div class="stat-card-value" style="color:var(--yellow)">{{ summary.pausado }}</div>
+    <div class="stat-card-sub">aguardando retomada</div>
+  </div>
+  <div class="stat-card red">
+    <div class="stat-card-title">ATRASADAS</div>
+    <div class="stat-card-value" style="color:var(--red)">{{ summary.atrasado }}</div>
+    <div class="stat-card-sub">> 4 dias úteis</div>
+  </div>
+</div>
+
+<!-- ── Header row ─────────────────────────────────────── -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+  <span class="section-title red">◆ TODAS AS PRODUÇÕES</span>
+  <a href="/productions/new" class="action-btn green-btn" style="font-size:11px;padding:8px 18px">
+    ✚ NOVA PRODUÇÃO
+  </a>
+</div>
+
+{% if prods %}
+<div style="display:flex;flex-direction:column;gap:10px">
+{% for p in prods %}
+
+  {% set sc = 'green' if p.dl_color=='green' else 'yellow' if p.dl_color=='yellow' else 'red' %}
+  {% set status_label = {
+    'iniciado': 'INICIADO',
+    'em_andamento': 'EM ANDAMENTO',
+    'pausado': 'PAUSADO',
+    'concluido': 'CONCLUÍDO'
+  }[p.status] %}
+  {% set status_color = {
+    'iniciado': 'var(--blue)',
+    'em_andamento': 'var(--green)',
+    'pausado': 'var(--yellow)',
+    'concluido': 'var(--gray2)'
+  }[p.status] %}
+
+  <div style="background:var(--card);border:2px solid var(--{{ sc }});box-shadow:4px 4px 0 var(--{{ sc == 'green' and 'g-dark' or sc == 'yellow' and 'y-dark' or 'r-dark' }});padding:0">
+
+    <!-- Card header -->
+    <div style="background:var(--card2);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border2)">
+      <div style="display:flex;align-items:center;gap:14px">
+        <span style="color:var(--{{ sc }});font-size:18px;font-family:var(--font-vt)">▶</span>
+        <div>
+          <div style="font-size:13px;font-weight:bold;color:var(--white)">{{ p.title }}</div>
+          <div style="font-size:10px;color:var(--gray2)">{{ p.producer }}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:10px;color:{{ status_color }};border:1px solid {{ status_color }};padding:3px 10px">{{ status_label }}</span>
+        <span style="font-size:10px;color:var(--{{ sc }})">{{ p.bdays }} dias úteis</span>
+        <a href="/productions/{{ p.id }}" class="action-btn blue-btn" style="font-size:10px;padding:5px 14px">VER ▶</a>
+      </div>
+    </div>
+
+    <!-- Metrics row -->
+    <div style="padding:12px 16px;display:flex;gap:24px;flex-wrap:wrap;align-items:center">
+
+      <!-- Arcos -->
+      <div style="flex:1;min-width:160px">
+        <div style="font-size:9px;color:var(--gray2);margin-bottom:5px">◆ ARCOS CONCLUÍDOS</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;background:var(--card2);height:8px;border:1px solid var(--border2)">
+            <div style="height:100%;background:var(--{{ sc }});width:{{ p.arc_pct }}%"></div>
+          </div>
+          <span style="font-size:11px;color:var(--{{ sc }});white-space:nowrap">{{ p.arcs_done_count }}/{{ p.total_arcs }}</span>
+        </div>
+      </div>
+
+      <!-- Chars -->
+      <div style="flex:1;min-width:160px">
+        <div style="font-size:9px;color:var(--gray2);margin-bottom:5px">◆ CARACTERES (meta 20.000)</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;background:var(--card2);height:8px;border:1px solid var(--border2)">
+            <div style="height:100%;background:var(--blue);width:{{ p.chars_pct }}%"></div>
+          </div>
+          <span style="font-size:11px;color:var(--blue);white-space:nowrap">{{ p.total_chars }}</span>
+        </div>
+      </div>
+
+      <!-- Deadline -->
+      <div style="text-align:center;min-width:80px">
+        <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">◆ PRAZO</div>
+        {% if p.status == 'concluido' %}
+          <span style="color:var(--green);font-size:11px">✔ CONCLUÍDO</span>
+        {% elif p.bdays <= 4 %}
+          <span style="color:var(--{{ sc }});font-family:var(--font-vt);font-size:22px">{{ 4 - p.bdays }}</span>
+          <span style="font-size:9px;color:var(--gray2)"> dias rest.</span>
+        {% else %}
+          <span style="color:var(--red);font-size:11px">⚠ ATRASADO</span>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+{% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state">
+  ⚠ &nbsp; Nenhuma produção cadastrada ainda.
+  <br><br>
+  <a href="/productions/new" class="action-btn green-btn" style="font-size:11px">✚ CRIAR PRIMEIRA PRODUÇÃO</a>
+</div>
+{% endif %}
+
+{% endblock %}
