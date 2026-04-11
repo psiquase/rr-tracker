@@ -472,6 +472,7 @@ def shorts():
 @app.route("/shorts/new", methods=["GET", "POST"])
 def shorts_new():
     msg = msg_type = None
+    from_prod = request.args.get("from") == "production_new"
     if request.method == "POST":
         title    = request.form.get("title",    "").strip()
         producer = request.form.get("producer", "").strip()
@@ -488,8 +489,13 @@ def shorts_new():
                     "INSERT INTO shorts (title,producer,status,started_at,notes) VALUES (?,?,?,?,?)",
                     (title, producer, "em_andamento", now, notes)
                 )
-            msg = f"✔  Short iniciado: {title}"; msg_type = "success"
-    return render_template("shorts_new.html", msg=msg, msg_type=msg_type, active="shorts")
+            # If came from production_new page, show success there
+            if request.form.get("from_prod") == "1" or from_prod:
+                msg = f"✔  Short iniciado: {title}"; msg_type = "success"
+            else:
+                return redirect(url_for("productions"))
+    return render_template("shorts_new.html", msg=msg, msg_type=msg_type,
+                           active="production_new" if from_prod else "shorts")
 
 
 @app.route("/shorts/<int:sid>/status", methods=["POST"])
@@ -606,8 +612,8 @@ def productions():
 
 @app.route("/productions/new", methods=["GET", "POST"])
 def production_new():
-    msg = None
-    msg_type = None
+    msg = msg_type = None
+    tab = request.args.get("tab", "producao")
     if request.method == "POST":
         title      = request.form.get("title", "").strip()
         producer   = request.form.get("producer", "").strip()
@@ -637,11 +643,8 @@ def production_new():
 
     return render_template("production_new.html",
                            msg=msg, msg_type=msg_type,
+                           tab=tab,
                            active="production_new")
-
-    return render_template("production_new.html",
-                           msg=msg, msg_type=msg_type,
-                           active="productions")
 
 
 @app.route("/productions/<int:pid>")
