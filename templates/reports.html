@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}RELATÓRIOS{% endblock %}
+{% block header_icon %}<span style="color:var(--yellow)">⚑</span>{% endblock %}
+{% block header_title %}<span style="color:var(--yellow)">RELATÓRIO SEMANAL</span>{% endblock %}
+
+{% block content %}
+
+<!-- ── Week selector ──────────────────────────────────── -->
+<div style="margin-bottom:6px">
+  <span class="section-title yellow">◆ PERÍODO</span>
+</div>
+
+<form method="GET" action="/reports">
+  <div class="week-bar">
+
+    <div class="week-opt {% if weeks_back==0 %}active{% endif %}">
+      <label>
+        <input type="radio" name="w" value="0"
+               {% if weeks_back==0 %}checked{% endif %}
+               onchange="this.form.submit()"/>
+        ESTA SEMANA
+      </label>
+      <span class="week-range">{{ mon }} – {{ sun }}</span>
+    </div>
+
+    <div class="week-opt {% if weeks_back==1 %}active{% endif %}">
+      <label>
+        <input type="radio" name="w" value="1"
+               {% if weeks_back==1 %}checked{% endif %}
+               onchange="this.form.submit()"/>
+        SEMANA PASSADA
+      </label>
+      {% set prev_mon = mon %}
+      <span class="week-range">semana anterior</span>
+    </div>
+
+    <div class="week-opt {% if weeks_back==2 %}active{% endif %}">
+      <label>
+        <input type="radio" name="w" value="2"
+               {% if weeks_back==2 %}checked{% endif %}
+               onchange="this.form.submit()"/>
+        HÁ 2 SEMANAS
+      </label>
+    </div>
+
+    <div style="margin-left:auto;display:flex;gap:10px;align-items:center">
+      <a href="/register" class="action-btn green-btn" style="font-size:11px;padding:8px 16px">
+        ✚ NOVO REGISTRO
+      </a>
+    </div>
+  </div>
+</form>
+
+<!-- ── Table ──────────────────────────────────────────── -->
+<div style="margin-bottom:10px">
+  <span class="section-title yellow">◆ REGRAVAÇÔES — DETALHE</span>
+</div>
+
+<div class="table-wrap">
+  {% if rows %}
+  <table class="pixel-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>PRODUTOR</th>
+        <th>PROJETO</th>
+        <th>QTDE</th>
+        <th>MOTIVO</th>
+        <th>DESCRIÇÃO</th>
+        <th>DATA / HORA</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr class="row-{{ r.tag }}">
+        <td style="color:var(--gray2);font-size:10px">{{ loop.index }}</td>
+        <td>{{ r.producer }}</td>
+        <td>{{ r.project }}</td>
+        <td><span class="count-badge">{{ r.count }}</span></td>
+        <td>{{ r.reason }}</td>
+        <td style="font-size:10px;color:var(--gray2)">
+          {{ r.description if r.description else '—' }}
+        </td>
+        <td style="font-size:10px;white-space:nowrap">
+          {{ r.created_at[:16] }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    ⚠ &nbsp; Nenhuma regravação registrada neste período.
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── Summary bar ────────────────────────────────────── -->
+{% set tc = 'red' if total > 20 else 'yellow' if total > 8 else 'green' %}
+<div class="summary-bar">
+  <div>
+    <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">◆ TOTAL DO PERÍODO</div>
+    <span class="summary-val {{ tc }}">{{ total }}</span>
+    <span style="font-size:10px;color:var(--gray2)"> regravaçôes</span>
+  </div>
+  <div>
+    <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">◆ REGISTROS</div>
+    <span class="summary-val blue" style="color:var(--blue)">{{ rows|length }}</span>
+  </div>
+  <div style="margin-left:auto;display:flex;gap:20px;font-size:10px;align-items:center">
+    <span style="display:flex;align-items:center;gap:6px">
+      <span style="display:inline-block;width:10px;height:10px;background:var(--green)"></span>
+      Baixo (&lt; 3)
+    </span>
+    <span style="display:flex;align-items:center;gap:6px">
+      <span style="display:inline-block;width:10px;height:10px;background:var(--yellow)"></span>
+      Médio (3–4)
+    </span>
+    <span style="display:flex;align-items:center;gap:6px">
+      <span style="display:inline-block;width:10px;height:10px;background:var(--red)"></span>
+      Alto (≥ 5)
+    </span>
+  </div>
+</div>
+
+{% endblock %}
