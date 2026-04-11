@@ -1,6 +1,6 @@
 """
 ╔══════════════════════════════════════════════════════════╗
-║   RE-RECORDING TRACKER  ◆  WEB EDITION                   ║
+║   PRODUÇÃO PHOENIX  ◆  WEB EDITION                   ║
 ║   Flask + SQLite  |  Free hosting via Render + GitHub     ║
 ╚══════════════════════════════════════════════════════════╝
 """
@@ -16,7 +16,7 @@ from flask import (Flask, render_template, request, jsonify,
 app = Flask(__name__)
 
 # ── Secret key for sessions (change this in production!) ─────
-app.secret_key = os.environ.get("SECRET_KEY", "rr-tracker-pixel-2026")
+app.secret_key = os.environ.get("SECRET_KEY", "phoenix-pixel-2026")
 
 # ── Session config ────────────────────────────────────────────
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
@@ -466,7 +466,7 @@ def shorts():
         'concluido': sum(1 for s in all_s if s['status'] == 'concluido'),
         'pausado':   sum(1 for s in all_s if s['status'] == 'pausado'),
     }
-    return render_template("shorts.html", shorts=all_s, summ=summ, active="shorts")
+    return redirect(url_for("productions"))
 
 
 @app.route("/shorts/new", methods=["GET", "POST"])
@@ -496,7 +496,7 @@ def shorts_new():
 def shorts_status(sid):
     new_status = request.form.get("status", "")
     if new_status not in ("em_andamento", "pausado", "concluido", "iniciado"):
-        return redirect(url_for("shorts"))
+        return redirect(url_for("productions"))
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with get_db() as c:
         if new_status == "concluido":
@@ -507,7 +507,7 @@ def shorts_status(sid):
                       (new_status, now, sid))
         else:
             c.execute("UPDATE shorts SET status=? WHERE id=?", (new_status, sid))
-    return redirect(url_for("shorts"))
+    return redirect(url_for("productions"))
 
 
 @app.route("/shorts/<int:sid>/delete", methods=["POST"])
@@ -515,7 +515,7 @@ def shorts_status(sid):
 def shorts_delete(sid):
     with get_db() as c:
         c.execute("DELETE FROM shorts WHERE id=?", (sid,))
-    return redirect(url_for("shorts"))
+    return redirect(url_for("productions"))
 @login_required
 def record_delete(rid):
     """Delete a re-recording record (admin only)."""
@@ -588,6 +588,8 @@ def productions():
         rows = c.execute("SELECT * FROM productions ORDER BY started_at DESC").fetchall()
     prods = [enrich_production(r) for r in rows]
 
+    all_shorts = [enrich_short(s) for s in db_shorts_all()]
+
     summary = {
         'total':      len(prods),
         'iniciado':   sum(1 for p in prods if p['status'] == 'iniciado'),
@@ -598,6 +600,7 @@ def productions():
     }
     return render_template("productions.html",
                            prods=prods, summary=summary,
+                           shorts=all_shorts,
                            active="productions")
 
 
@@ -820,7 +823,7 @@ def reports_download():
     hdr = doc.add_paragraph()
     hdr.alignment = WD_ALIGN_PARAGRAPH.CENTER
     shade_para(hdr, '0A0A1A')
-    run = hdr.add_run('◆  RE-RECORDING TRACKER  ◆')
+    run = hdr.add_run('◆  PRODUÇÃO PHOENIX  ◆')
     run.font.name = 'Courier New'; run.font.size = Pt(20)
     run.font.bold = True
     run.font.color.rgb = RGBColor(0x40, 0xC4, 0xFF)
@@ -1058,7 +1061,7 @@ def reports_download():
     footer_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     shade_para(footer_p, '0A0A1A')
     rf = footer_p.add_run(
-        f'◆  RR Tracker  |  Relatório gerado automaticamente  |  '
+        f'◆  Produção Phoenix  |  Relatório gerado automaticamente  |  '
         f'{datetime.now().strftime("%d/%m/%Y %H:%M")}  ◆'
     )
     rf.font.name = 'Courier New'; rf.font.size = Pt(8)
