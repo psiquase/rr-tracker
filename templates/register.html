@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}REGISTRAR{% endblock %}
+{% block header_icon %}<span style="color:var(--green)">✚</span>{% endblock %}
+{% block header_title %}<span style="color:var(--green)">REGISTRAR NOVA REGRAVAÇÃO</span>{% endblock %}
+
+{% block content %}
+
+<div style="max-width:660px;margin:0 auto">
+  <div style="margin-bottom:14px">
+    <span class="section-title green">◆ NOVO REGISTRO</span>
+  </div>
+
+  <div class="form-card">
+
+    <!-- Form header bar -->
+    <div class="form-header">
+      <span>✚</span>
+      <span>DADOS DA REGRAVAÇÃO</span>
+      <span style="margin-left:auto;font-size:10px;opacity:.7">* OBRIGATÓRIO</span>
+    </div>
+
+    <div class="form-body">
+      <form method="POST" action="/register" id="reg-form">
+
+        <!-- Produtor -->
+        <div class="field-group">
+          <label class="field-label required">◆ PRODUTOR</label>
+          <input class="pixel-input" type="text" name="producer"
+                 placeholder="Nome do produtor..."
+                 value="{{ request.form.get('producer','') }}" required/>
+        </div>
+
+        <!-- Projeto -->
+        <div class="field-group">
+          <label class="field-label required">◆ PROJETO / EPISÓDIO</label>
+          <input class="pixel-input" type="text" name="project"
+                 placeholder="Nome do projeto ou episódio..."
+                 value="{{ request.form.get('project','') }}" required/>
+        </div>
+
+        <!-- Número de regravaçôes -->
+        <div class="field-group">
+          <label class="field-label required">◆ Nº DE REGRAVAÇÔES</label>
+          <input class="pixel-input" type="number" name="count"
+                 min="1" max="99"
+                 placeholder="1"
+                 value="{{ request.form.get('count','1') }}" required/>
+        </div>
+
+        <!-- Motivo -->
+        <div class="field-group">
+          <label class="field-label required">◆ MOTIVO</label>
+          <select class="pixel-select" name="reason" id="reason-select" required>
+            {% for r in reasons %}
+              <option value="{{ r }}"
+                {% if request.form.get('reason') == r %}selected{% endif %}>
+                {{ r }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Descrição (aparece só para "Outro") -->
+        <div class="field-group" id="desc-group">
+          <label class="field-label danger required">◆ DESCREVA O MOTIVO</label>
+          <input class="pixel-input" type="text" name="description"
+                 id="desc-input"
+                 placeholder="Descreva o motivo detalhadamente..."
+                 value="{{ request.form.get('description','') }}"/>
+          <span style="font-size:9px;color:var(--red);margin-top:4px;display:block">
+            ⚠ Obrigatório quando motivo = "Outro"
+          </span>
+        </div>
+
+        <!-- Observação (opcional) -->
+        <div class="field-group">
+          <label class="field-label">◆ OBSERVAÇÃO <span style="color:var(--gray2)">(opcional)</span></label>
+          <textarea class="pixel-textarea" name="observation"
+                    placeholder="Observações adicionais...">{{ request.form.get('observation','') }}</textarea>
+        </div>
+
+        <!-- Buttons -->
+        <div class="btn-row">
+          <button type="submit" class="action-btn green-btn">
+            <span>✔</span> SALVAR REGISTRO
+          </button>
+          <button type="reset" class="action-btn gray-btn" onclick="resetForm()">
+            <span>↺</span> LIMPAR
+          </button>
+          <a href="/dashboard" class="action-btn blue-btn">
+            <span>◈</span> DASHBOARD
+          </a>
+        </div>
+
+      </form>
+
+      <!-- Status message -->
+      {% if msg %}
+        <div class="status-msg {{ msg_type }}">
+          {% if msg_type == 'success' %}✔{% else %}⚠{% endif %}
+          &nbsp;{{ msg }}
+        </div>
+      {% endif %}
+
+    </div><!-- /form-body -->
+  </div><!-- /form-card -->
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const sel   = document.getElementById('reason-select');
+const group = document.getElementById('desc-group');
+const inp   = document.getElementById('desc-input');
+
+function toggleDesc() {
+  const isOutro = sel.value === 'Outro';
+  group.classList.toggle('visible', isOutro);
+  inp.required = isOutro;
+}
+
+sel.addEventListener('change', toggleDesc);
+toggleDesc(); // run on page load (preserves state on POST-back)
+
+function resetForm() {
+  sel.value = sel.options[0].value;
+  toggleDesc();
+}
+</script>
+{% endblock %}
