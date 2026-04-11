@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}NOVA PRODUÇÃO{% endblock %}
+{% block header_icon %}<span style="color:var(--green)">✚</span>{% endblock %}
+{% block header_title %}<span style="color:var(--green)">NOVA PRODUÇÃO</span>{% endblock %}
+
+{% block content %}
+<div style="max-width:580px;margin:0 auto">
+  <div style="margin-bottom:12px">
+    <span class="section-title green">◆ CADASTRAR PRODUÇÃO</span>
+  </div>
+
+  <div class="form-card">
+    <div class="form-header" style="background:var(--red)">
+      <span>▶</span>
+      <span>DADOS DA PRODUÇÃO</span>
+      <span style="margin-left:auto;font-size:10px;opacity:.7">* OBRIGATÓRIO</span>
+    </div>
+    <div class="form-body">
+      <form method="POST" action="/productions/new">
+
+        <div class="field-group">
+          <label class="field-label required">◆ TÍTULO DO ROTEIRO</label>
+          <input class="pixel-input" type="text" name="title"
+                 placeholder="Ex: Minecraft SMP S2 EP05..."
+                 value="{{ request.form.get('title','') }}" required/>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label required">◆ PRODUTOR RESPONSÁVEL</label>
+          <input class="pixel-input" type="text" name="producer"
+                 placeholder="Nome do produtor..."
+                 value="{{ request.form.get('producer','') }}" required/>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label required">◆ NÚMERO DE ARCOS</label>
+          <input class="pixel-input" type="number" name="total_arcs"
+                 min="1" max="15" value="{{ request.form.get('total_arcs','11') }}" required/>
+          <span style="font-size:9px;color:var(--gray2);display:block;margin-top:3px">Máximo 15 arcos por roteiro</span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">◆ OBSERVAÇÕES <span style="color:var(--gray2)">(opcional)</span></label>
+          <textarea class="pixel-textarea" name="notes"
+                    placeholder="Notas sobre esta produção...">{{ request.form.get('notes','') }}</textarea>
+        </div>
+
+        <div class="btn-row">
+          <button type="submit" class="action-btn green-btn">✚ INICIAR PRODUÇÃO</button>
+          <a href="/productions" class="action-btn gray-btn">← VOLTAR</a>
+        </div>
+      </form>
+
+      {% if msg %}
+        <div class="status-msg {{ msg_type }}">
+          {% if msg_type == 'success' %}✔{% else %}⚠{% endif %} {{ msg }}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
