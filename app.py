@@ -376,6 +376,26 @@ def health():
     return "OK", 200
 
 
+@app.route("/records/<int:rid>/delete", methods=["POST"])
+@login_required
+def record_delete(rid):
+    """Delete a re-recording record (admin only)."""
+    with get_db() as c:
+        c.execute("DELETE FROM records WHERE id=?", (rid,))
+    # Return to reports page preserving tab and week
+    ref = request.referrer or "/reports?tab=regravaçoes"
+    return redirect(ref)
+
+
+@app.route("/productions/<int:pid>/log/<int:lid>/delete", methods=["POST"])
+def log_delete(pid, lid):
+    """Delete a daily log entry (public — producer can fix mistakes)."""
+    with get_db() as c:
+        c.execute("DELETE FROM production_daily WHERE id=? AND production_id=?",
+                  (lid, pid))
+    return redirect(url_for("production_detail", pid=pid))
+
+
 # ═══════════════════════════════════════════
 #  PRODUCTION HELPERS
 # ═══════════════════════════════════════════
