@@ -6,12 +6,13 @@
 """
 
 import os
+import io
 import json
 import sqlite3
 from functools import wraps
 from datetime import datetime, timedelta, date
 from flask import (Flask, render_template, request, jsonify,
-                   redirect, url_for, session)
+                   redirect, url_for, session, send_file)
 app = Flask(__name__)
 
 # ── Secret key for sessions (change this in production!) ─────
