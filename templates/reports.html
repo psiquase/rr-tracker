@@ -1,129 +1,292 @@
 {% extends "base.html" %}
 {% block title %}RELATÓRIOS{% endblock %}
 {% block header_icon %}<span style="color:var(--yellow)">⚑</span>{% endblock %}
-{% block header_title %}<span style="color:var(--yellow)">RELATÓRIO SEMANAL</span>{% endblock %}
+{% block header_title %}<span style="color:var(--yellow)">RELATÓRIOS</span>{% endblock %}
 
 {% block content %}
 
-<!-- ── Week selector ──────────────────────────────────── -->
-<div style="margin-bottom:6px">
-  <span class="section-title yellow">◆ PERÍODO</span>
+<!-- ══ TAB SWITCHER ══════════════════════════════════════ -->
+<div style="display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid var(--border2)">
+
+  <a href="/reports?tab=regravaçoes&w={{ weeks_back }}"
+     style="padding:10px 22px;font-size:11px;letter-spacing:1px;text-decoration:none;
+            border:2px solid {% if tab=='regravaçoes' %}var(--yellow){% else %}var(--border2){% endif %};
+            border-bottom:none;
+            background:{% if tab=='regravaçoes' %}var(--card){% else %}var(--card2){% endif %};
+            color:{% if tab=='regravaçoes' %}var(--yellow){% else %}var(--gray2){% endif %};
+            position:relative;top:2px">
+    ⚑ &nbsp;REGRAVAÇÔES
+  </a>
+
+  <a href="/reports?tab=producoes&w={{ weeks_back }}"
+     style="padding:10px 22px;font-size:11px;letter-spacing:1px;text-decoration:none;
+            border:2px solid {% if tab=='producoes' %}var(--blue){% else %}var(--border2){% endif %};
+            border-bottom:none;
+            background:{% if tab=='producoes' %}var(--card){% else %}var(--card2){% endif %};
+            color:{% if tab=='producoes' %}var(--blue){% else %}var(--gray2){% endif %};
+            position:relative;top:2px">
+    ▶ &nbsp;PRODUÇÕES
+  </a>
+
 </div>
 
-<form method="GET" action="/reports">
-  <div class="week-bar">
 
-    <div class="week-opt {% if weeks_back==0 %}active{% endif %}">
-      <label>
-        <input type="radio" name="w" value="0"
-               {% if weeks_back==0 %}checked{% endif %}
-               onchange="this.form.submit()"/>
-        ESTA SEMANA
-      </label>
-      <span class="week-range">{{ mon }} – {{ sun }}</span>
-    </div>
+<!-- ══ TAB: REGRAVAÇÔES ══════════════════════════════════ -->
+{% if tab == 'regravaçoes' %}
 
-    <div class="week-opt {% if weeks_back==1 %}active{% endif %}">
-      <label>
-        <input type="radio" name="w" value="1"
-               {% if weeks_back==1 %}checked{% endif %}
-               onchange="this.form.submit()"/>
-        SEMANA PASSADA
-      </label>
-      {% set prev_mon = mon %}
-      <span class="week-range">semana anterior</span>
-    </div>
-
-    <div class="week-opt {% if weeks_back==2 %}active{% endif %}">
-      <label>
-        <input type="radio" name="w" value="2"
-               {% if weeks_back==2 %}checked{% endif %}
-               onchange="this.form.submit()"/>
-        HÁ 2 SEMANAS
-      </label>
-    </div>
-
-    <div style="margin-left:auto;display:flex;gap:10px;align-items:center">
-      <a href="/reports/download?w={{ weeks_back }}" class="action-btn blue-btn" style="font-size:11px;padding:8px 16px">
-        ⬇ BAIXAR .DOCX
-      </a>
-      <a href="/register" class="action-btn green-btn" style="font-size:11px;padding:8px 16px">
-        ✚ NOVO REGISTRO
-      </a>
-    </div>
-  </div>
-</form>
-
-<!-- ── Table ──────────────────────────────────────────── -->
-<div style="margin-bottom:10px">
-  <span class="section-title yellow">◆ REGRAVAÇÔES — DETALHE</span>
-</div>
-
-<div class="table-wrap">
-  {% if rows %}
-  <table class="pixel-table">
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>PRODUTOR</th>
-        <th>PROJETO</th>
-        <th>QTDE</th>
-        <th>MOTIVO</th>
-        <th>DESCRIÇÃO</th>
-        <th>DATA / HORA</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for r in rows %}
-      <tr class="row-{{ r.tag }}">
-        <td style="color:var(--gray2);font-size:10px">{{ loop.index }}</td>
-        <td>{{ r.producer }}</td>
-        <td>{{ r.project }}</td>
-        <td><span class="count-badge">{{ r.count }}</span></td>
-        <td>{{ r.reason }}</td>
-        <td style="font-size:10px;color:var(--gray2)">
-          {{ r.description if r.description else '—' }}
-        </td>
-        <td style="font-size:10px;white-space:nowrap">
-          {{ r.created_at[:16] }}
-        </td>
-      </tr>
+  <!-- Week selector -->
+  <form method="GET" action="/reports">
+    <input type="hidden" name="tab" value="regravaçoes"/>
+    <div class="week-bar">
+      <span style="font-size:9px;color:var(--gray2);letter-spacing:1px">◆ PERÍODO:</span>
+      {% for val, lbl in [(0,'ESTA SEMANA'),(1,'SEMANA PASSADA'),(2,'HÁ 2 SEMANAS')] %}
+        <label style="display:flex;flex-direction:column;gap:2px;cursor:pointer">
+          <span style="display:flex;align-items:center;gap:6px;font-size:11px;
+                       color:{% if weeks_back==val %}var(--yellow){% else %}var(--gray2){% endif %}">
+            <input type="radio" name="w" value="{{ val }}"
+                   {% if weeks_back==val %}checked{% endif %}
+                   onchange="this.form.submit()"
+                   style="accent-color:var(--yellow)"/>
+            {{ lbl }}
+          </span>
+          {% if val == 0 %}
+            <span style="font-size:9px;color:var(--gray);margin-left:18px">{{ mon }} – {{ sun }}</span>
+          {% endif %}
+        </label>
       {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <div class="empty-state">
-    ⚠ &nbsp; Nenhuma regravação registrada neste período.
-  </div>
-  {% endif %}
-</div>
+      <a href="/productions/new" class="action-btn green-btn" style="margin-left:auto;font-size:10px;padding:7px 16px">
+        ✚ NOVA PRODUÇÃO
+      </a>
+    </div>
+  </form>
 
-<!-- ── Summary bar ────────────────────────────────────── -->
-{% set tc = 'red' if total > 20 else 'yellow' if total > 8 else 'green' %}
-<div class="summary-bar">
-  <div>
-    <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">◆ TOTAL DO PERÍODO</div>
-    <span class="summary-val {{ tc }}">{{ total }}</span>
-    <span style="font-size:10px;color:var(--gray2)"> regravaçôes</span>
+  <div style="margin-bottom:10px">
+    <span class="section-title yellow">◆ REGRAVAÇÔES — DETALHE SEMANAL</span>
   </div>
-  <div>
-    <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">◆ REGISTROS</div>
-    <span class="summary-val blue" style="color:var(--blue)">{{ rows|length }}</span>
+
+  <div class="table-wrap">
+    {% if rows %}
+    <table class="pixel-table">
+      <thead>
+        <tr>
+          <th>#</th><th>PRODUTOR</th><th>PROJETO</th>
+          <th>QTDE</th><th>MOTIVO</th><th>DESCRIÇÃO</th><th>DATA / HORA</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr class="row-{{ r.tag }}">
+          <td style="color:var(--gray2);font-size:10px">{{ loop.index }}</td>
+          <td>{{ r.producer }}</td>
+          <td>{{ r.project }}</td>
+          <td><span class="count-badge">{{ r.count }}</span></td>
+          <td>{{ r.reason }}</td>
+          <td style="font-size:10px;color:var(--gray2)">{{ r.description or '—' }}</td>
+          <td style="font-size:10px;white-space:nowrap">{{ r.created_at[:16] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">⚠ Nenhuma regravação registrada neste período.</div>
+    {% endif %}
   </div>
-  <div style="margin-left:auto;display:flex;gap:20px;font-size:10px;align-items:center">
-    <span style="display:flex;align-items:center;gap:6px">
-      <span style="display:inline-block;width:10px;height:10px;background:var(--green)"></span>
-      Baixo (&lt; 3)
-    </span>
-    <span style="display:flex;align-items:center;gap:6px">
-      <span style="display:inline-block;width:10px;height:10px;background:var(--yellow)"></span>
-      Médio (3–4)
-    </span>
-    <span style="display:flex;align-items:center;gap:6px">
-      <span style="display:inline-block;width:10px;height:10px;background:var(--red)"></span>
-      Alto (≥ 5)
-    </span>
+
+  {% set tc = 'red' if total > 20 else 'yellow' if total > 8 else 'green' %}
+  <div class="summary-bar">
+    <div>
+      <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">◆ TOTAL DO PERÍODO</div>
+      <span class="summary-val {{ tc }}">{{ total }}</span>
+      <span style="font-size:10px;color:var(--gray2)"> regravaçôes</span>
+    </div>
+    <div>
+      <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">◆ REGISTROS</div>
+      <span class="summary-val" style="color:var(--blue)">{{ rows|length }}</span>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:20px;font-size:10px;align-items:center">
+      <span style="display:flex;align-items:center;gap:6px">
+        <span style="display:inline-block;width:10px;height:10px;background:var(--green)"></span>Baixo (&lt;3)
+      </span>
+      <span style="display:flex;align-items:center;gap:6px">
+        <span style="display:inline-block;width:10px;height:10px;background:var(--yellow)"></span>Médio (3–4)
+      </span>
+      <span style="display:flex;align-items:center;gap:6px">
+        <span style="display:inline-block;width:10px;height:10px;background:var(--red)"></span>Alto (≥5)
+      </span>
+    </div>
   </div>
-</div>
+
+
+<!-- ══ TAB: PRODUÇÕES ════════════════════════════════════ -->
+{% else %}
+
+  <!-- ── Summary cards por produtor ───────────────────── -->
+  <div style="margin-bottom:10px">
+    <span class="section-title blue">◆ RESUMO POR PRODUTOR</span>
+  </div>
+
+  {% if prod_by_producer %}
+  <div class="table-wrap" style="margin-bottom:24px">
+    <table class="pixel-table">
+      <thead>
+        <tr>
+          <th>PRODUTOR</th>
+          <th style="text-align:center">TOTAL</th>
+          <th style="text-align:center">INICIADAS</th>
+          <th style="text-align:center">EM ANDAMENTO</th>
+          <th style="text-align:center">PAUSADAS</th>
+          <th style="text-align:center">FINALIZADAS</th>
+          <th style="text-align:center">TEMPO MÉDIO</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in prod_by_producer | sort(attribute='total', reverse=True) %}
+        <tr>
+          <td style="color:var(--white);font-size:12px">{{ g.producer }}</td>
+          <td style="text-align:center">
+            <span style="font-family:var(--font-vt);font-size:20px;color:var(--blue)">{{ g.total }}</span>
+          </td>
+          <td style="text-align:center;color:var(--b-soft)">{{ g.iniciado }}</td>
+          <td style="text-align:center">
+            {% if g.em_andamento > 0 %}
+              <span style="color:var(--green)">{{ g.em_andamento }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td style="text-align:center">
+            {% if g.pausado > 0 %}
+              <span style="color:var(--yellow)">{{ g.pausado }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td style="text-align:center">
+            {% if g.concluido > 0 %}
+              <span style="color:var(--green)">{{ g.concluido }}</span>
+            {% else %}
+              <span style="color:var(--gray)">0</span>
+            {% endif %}
+          </td>
+          <td style="text-align:center">
+            {% if g.avg_bdays is not none %}
+              <span style="color:{% if g.avg_bdays <= 4 %}var(--green){% elif g.avg_bdays <= 6 %}var(--yellow){% else %}var(--red){% endif %};font-family:var(--font-vt);font-size:18px">
+                {{ g.avg_bdays }}
+              </span>
+              <span style="font-size:9px;color:var(--gray2)"> d.u.</span>
+            {% else %}
+              <span style="color:var(--gray2);font-size:10px">sem finalizadas</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── Todas as produções ───────────────────────────── -->
+  <div style="margin-bottom:10px">
+    <span class="section-title red">◆ TODAS AS PRODUÇÕES — HISTÓRICO COMPLETO</span>
+  </div>
+
+  <div class="table-wrap">
+    <table class="pixel-table">
+      <thead>
+        <tr>
+          <th>PRODUTOR</th>
+          <th>TÍTULO</th>
+          <th style="text-align:center">ARCOS</th>
+          <th style="text-align:center">STATUS</th>
+          <th style="text-align:center">INÍCIO</th>
+          <th style="text-align:center">DURAÇÃO</th>
+          <th style="text-align:center">PRAZO</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in all_prods | sort(attribute='started_at', reverse=True) %}
+          {% set sc = {
+            'iniciado':    'var(--blue)',
+            'em_andamento':'var(--green)',
+            'pausado':     'var(--yellow)',
+            'concluido':   'var(--gray2)'
+          }[p.status] %}
+          {% set sl = {
+            'iniciado':    'INICIADO',
+            'em_andamento':'EM ANDAMENTO',
+            'pausado':     'PAUSADO',
+            'concluido':   'CONCLUÍDO'
+          }[p.status] %}
+          {% set bdays = p.duration_bdays %}
+          {% set deadline_ok = p.status == 'concluido' or bdays <= 4 %}
+        <tr style="{% if p.status == 'concluido' %}background:rgba(0,230,118,.03){% elif bdays > 4 %}background:rgba(255,23,68,.04){% endif %}">
+          <td style="color:var(--white)">{{ p.producer }}</td>
+          <td>
+            <a href="/productions/{{ p.id }}" style="color:var(--b-soft);text-decoration:none;font-size:11px">
+              {{ p.title }}
+            </a>
+          </td>
+          <td style="text-align:center;font-size:11px">
+            <span style="color:{% if p.arcs_done_count == p.total_arcs %}var(--green){% else %}var(--white){% endif %}">
+              {{ p.arcs_done_count }}/{{ p.total_arcs }}
+            </span>
+          </td>
+          <td style="text-align:center">
+            <span style="font-size:9px;color:{{ sc }};border:1px solid {{ sc }};padding:2px 8px;white-space:nowrap">
+              {{ sl }}
+            </span>
+          </td>
+          <td style="text-align:center;font-size:10px;color:var(--gray2)">
+            {{ p.started_at[:10] }}
+          </td>
+          <td style="text-align:center">
+            <span style="font-family:var(--font-vt);font-size:18px;
+                         color:{% if bdays <= 4 %}var(--green){% elif bdays <= 6 %}var(--yellow){% else %}var(--red){% endif %}">
+              {{ bdays }}
+            </span>
+            <span style="font-size:9px;color:var(--gray2)"> d.u.</span>
+          </td>
+          <td style="text-align:center">
+            {% if p.status == 'concluido' %}
+              <span style="color:var(--green);font-size:10px">✔ NO PRAZO</span>
+            {% elif bdays <= 4 %}
+              <span style="color:var(--green);font-size:10px">{{ 4 - bdays }}d restantes</span>
+            {% else %}
+              <span style="color:var(--red);font-size:10px">⚠ +{{ bdays - 4 }}d atraso</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Summary bar -->
+  <div class="summary-bar" style="border-top-color:var(--blue)">
+    <div>
+      <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">◆ TOTAL DE PRODUÇÕES</div>
+      <span class="summary-val" style="color:var(--blue)">{{ all_prods|length }}</span>
+    </div>
+    <div>
+      <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">◆ FINALIZADAS</div>
+      <span class="summary-val" style="color:var(--green)">
+        {{ all_prods | selectattr('status','equalto','concluido') | list | length }}
+      </span>
+    </div>
+    <div>
+      <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">◆ EM ANDAMENTO</div>
+      <span class="summary-val" style="color:var(--yellow)">
+        {{ all_prods | selectattr('status','equalto','em_andamento') | list | length }}
+      </span>
+    </div>
+    <div>
+      <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">◆ ATRASADAS</div>
+      {% set atrasadas = all_prods | rejectattr('status','equalto','concluido') | selectattr('duration_bdays', 'gt', 4) | list | length %}
+      <span class="summary-val" style="color:{% if atrasadas > 0 %}var(--red){% else %}var(--green){% endif %}">
+        {{ atrasadas }}
+      </span>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="empty-state">⚠ Nenhuma produção cadastrada ainda.</div>
+  {% endif %}
+
+{% endif %}
 
 {% endblock %}
