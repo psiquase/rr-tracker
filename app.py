@@ -169,13 +169,83 @@ def db_trend():
     return [dict(r) for r in rows]
 
 
+def calc_bdays(start_str, end_str=None):
+    """Business days between two date strings."""
+    try:
+        start = date.fromisoformat(str(start_str)[:10])
+        end   = date.fromisoformat(str(end_str)[:10]) if end_str else date.today()
+    except Exception:
+        return 0
+    if start > end:
+        return 0
+    count = 0
+    cur = start
+    while cur < end:
+        if cur.weekday() < 5:
+            count += 1
+        cur += timedelta(days=1)
+    return count
+
+
+def db_production_report():
+    """
+    Returns per-producer summary + all productions list for the report.
+    """
+    with get_db() as c:
+        all_prods = [dict(r) for r in c.execute(
+            "SELECT * FROM productions ORDER BY producer, started_at DESC"
+        ).fetchall()]
+
+    # Enrich each production with duration
+    for p in all_prods:
+        p['arcs_done_list'] = json.loads(p.get('arcs_done') or '[]')
+        p['arcs_done_count'] = len(p['arcs_done_list'])
+        if p['status'] == 'concluido' and p.get('completed_at'):
+            p['duration_bdays'] = calc_bdays(p['started_at'], p['completed_at'])
+            p['duration_label'] = f"{p['duration_bdays']} d.u."
+        else:
+            p['duration_bdays'] = calc_bdays(p['started_at'])
+            p['duration_label'] = f"{p['duration_bdays']} d.u. (em curso)"
+
+    # Group by producer
+    producers = {}
+    for p in all_prods:
+        name = p['producer']
+        if name not in producers:
+            producers[name] = {
+                'producer':    name,
+                'total':       0,
+                'iniciado':    0,
+                'em_andamento':0,
+                'pausado':     0,
+                'concluido':   0,
+                'avg_bdays':   0,
+                '_durations':  [],
+                'productions': [],
+            }
+        g = producers[name]
+        g['total'] += 1
+        status = p['status']
+        if status in g: g[status] += 1
+        if p['status'] == 'concluido':
+            g['_durations'].append(p['duration_bdays'])
+        g['productions'].append(p)
+
+    # Compute averages
+    for g in producers.values():
+        d = g['_durations']
+        g['avg_bdays'] = round(sum(d) / len(d), 1) if d else None
+        del g['_durations']
+
+    return list(producers.values()), all_prods
+
+
 # ═══════════════════════════════════════════
 #  ROUTES
 # ═══════════════════════════════════════════
 
 @app.route("/")
 def index():
-    # Public users land on register; admins land on dashboard
     if is_admin():
         return redirect(url_for("dashboard"))
     return redirect(url_for("register"))
@@ -271,19 +341,26 @@ def register():
 @login_required
 def reports():
     weeks_back   = int(request.args.get("w", 0))
+    tab          = request.args.get("tab", "regravaçoes")
     rows, mon, sun = db_weekly(weeks_back)
 
-    # Annotate severity
     for r in rows:
         r["tag"] = ("high"   if r["count"] >= 5 else
                     "medium" if r["count"] >= 3 else "low")
 
     total = sum(r["count"] for r in rows)
+
+    # Production report data
+    prod_by_producer, all_prods = db_production_report()
+
     return render_template("reports.html",
                            rows=rows, total=total,
                            mon=mon.strftime("%d/%m"),
                            sun=sun.strftime("%d/%m/%Y"),
                            weeks_back=weeks_back,
+                           tab=tab,
+                           prod_by_producer=prod_by_producer,
+                           all_prods=all_prods,
                            active="reports")
 
 
@@ -397,7 +474,6 @@ def productions():
 
 
 @app.route("/productions/new", methods=["GET", "POST"])
-@login_required
 def production_new():
     msg = None
     msg_type = None
@@ -425,7 +501,12 @@ def production_new():
                        VALUES (?,?,?,'[]','iniciado',?,?,?)""",
                     (title, producer, int(total_arcs), now, now, notes)
                 )
-            return redirect(url_for("productions"))
+            msg      = f"✔  Produção registrada: {title}"
+            msg_type = "success"
+
+    return render_template("production_new.html",
+                           msg=msg, msg_type=msg_type,
+                           active="production_new")
 
     return render_template("production_new.html",
                            msg=msg, msg_type=msg_type,
