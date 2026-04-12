@@ -431,13 +431,19 @@ def db_shorts_report():
         if st == 'concluido':
             g['concluido'] += 1
             if s.get('completed_at'):
-                g['_durs'].append(calc_bdays(s['started_at'], s['completed_at']))
+                g['_durs'].append(calc_minutes(s['started_at'], s['completed_at']))
         elif st == 'pausado':
             g['pausado'] += 1
         else:
             g['andamento'] += 1
     for g in producers.values():
-        g['avg_bdays'] = round(sum(g['_durs'])/len(g['_durs']), 1) if g['_durs'] else None
+        if g['_durs']:
+            avg_mins = round(sum(g['_durs'])/len(g['_durs']))
+            g['avg_minutes'] = avg_mins
+            g['avg_label']   = format_duration(avg_mins)
+        else:
+            g['avg_minutes'] = None
+            g['avg_label']   = None
         del g['_durs']
     return list(producers.values()), rows
 
@@ -445,9 +451,19 @@ def db_shorts_report():
 def enrich_short(s):
     d = dict(s)
     if d['status'] == 'concluido' and d.get('completed_at'):
-        d['duration_bdays'] = calc_bdays(d['started_at'], d['completed_at'])
+        mins = calc_minutes(d['started_at'], d['completed_at'])
+        d['duration_minutes'] = mins
+        d['duration_label']   = format_duration(mins)
+        d['duration_bdays']   = calc_bdays(d['started_at'], d['completed_at'])
     else:
-        d['duration_bdays'] = calc_bdays(d['started_at'])
+        # In progress — show elapsed minutes
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        mins = calc_minutes(d['started_at'], now)
+        d['duration_minutes'] = mins
+        d['duration_label']   = format_duration(mins) + " (em curso)"
+        d['duration_bdays']   = 0
+    d['started_display']   = d['started_at'][:16].replace('T',' ')
+    d['completed_display'] = d['completed_at'][:16].replace('T',' ') if d.get('completed_at') else '—'
     return d
 
 
@@ -538,21 +554,45 @@ def record_delete(rid):
 # ═══════════════════════════════════════════
 
 def business_days_since(start_str):
-    # Count business days (Mon-Fri) from start date to today.
+    # Count business days from start to today, inclusive (day 1 = started today)
     try:
-        start = date.fromisoformat(start_str[:10])
+        start = date.fromisoformat(str(start_str)[:10])
     except Exception:
-        return 0
+        return 1
     today = date.today()
     if start > today:
-        return 0
+        return 1
     count = 0
     cur = start
-    while cur < today:
-        if cur.weekday() < 5:
+    while cur <= today:
+        if cur.weekday() < 5:  # Mon-Fri
             count += 1
         cur += timedelta(days=1)
-    return count
+    return max(1, count)  # minimum 1 (started today)
+
+
+def calc_minutes(start_str, end_str):
+    """Calculate minutes between two datetime strings."""
+    try:
+        from datetime import datetime as dt
+        fmt = "%Y-%m-%d %H:%M:%S"
+        start = dt.strptime(start_str[:19], fmt)
+        end   = dt.strptime(end_str[:19], fmt)
+        delta = end - start
+        return max(0, int(delta.total_seconds() / 60))
+    except Exception:
+        return 0
+
+
+def format_duration(minutes):
+    """Format minutes into human-readable string."""
+    if minutes < 60:
+        return f"{minutes} min"
+    h = minutes // 60
+    m = minutes % 60
+    if m == 0:
+        return f"{h}h"
+    return f"{h}h {m}min"
 
 
 def deadline_color(bdays, status):
