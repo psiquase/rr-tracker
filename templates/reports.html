@@ -345,12 +345,8 @@
           <td style="text-align:center;color:var(--yellow)">{{ g.pausado or '—' }}</td>
           <td style="text-align:center;color:var(--green)">{{ g.concluido or '—' }}</td>
           <td style="text-align:center">
-            {% if g.avg_bdays is not none %}
-              <span style="font-family:var(--font-vt);font-size:20px;
-                           color:{% if g.avg_bdays <= 2 %}var(--green){% elif g.avg_bdays <= 4 %}var(--yellow){% else %}var(--red){% endif %}">
-                {{ g.avg_bdays }}
-              </span>
-              <span style="font-size:9px;color:var(--gray2)"> d.u.</span>
+            {% if g.avg_label %}
+              <span style="color:var(--yellow);font-size:12px">{{ g.avg_label }}</span>
             {% else %}
               <span style="color:var(--gray2);font-size:10px">sem concluídos</span>
             {% endif %}
@@ -390,16 +386,14 @@
           <td style="text-align:center">
             <span style="font-size:9px;color:{{ sc }};border:1px solid {{ sc }};padding:2px 8px">{{ sl }}</span>
           </td>
-          <td style="text-align:center;font-size:10px;color:var(--gray2)">{{ s.started_at[:10] }}</td>
+          <td style="text-align:center;font-size:10px;color:var(--gray2)">{{ s.started_at[:10] }} {{ s.started_at[11:16] }}</td>
           <td style="text-align:center;font-size:10px;color:{% if s.completed_at %}var(--green){% else %}var(--gray2){% endif %}">
-            {{ s.completed_at[:10] if s.completed_at else '—' }}
+            {{ s.completed_at[:10] + ' ' + s.completed_at[11:16] if s.completed_at else '—' }}
           </td>
           <td style="text-align:center">
-            <span style="font-family:var(--font-vt);font-size:18px;
-                         color:{% if s.duration_bdays <= 2 %}var(--green){% elif s.duration_bdays <= 4 %}var(--yellow){% else %}var(--red){% endif %}">
-              {{ s.duration_bdays }}
+            <span style="color:{% if s.status=='concluido' %}var(--green){% else %}var(--yellow){% endif %};font-size:12px">
+              {{ s.duration_label }}
             </span>
-            <span style="font-size:9px;color:var(--gray2)"> d.u.</span>
           </td>
         </tr>
         {% endfor %}
