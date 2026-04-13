@@ -89,7 +89,9 @@ def init_db():
                 updated_at   TEXT,
                 paused_at    TEXT,
                 completed_at TEXT,
-                notes        TEXT    DEFAULT ''
+                notes        TEXT    DEFAULT '',
+                script_chars INTEGER DEFAULT 0,
+                arc_chars    TEXT    DEFAULT '{}'
             );
 
             CREATE TABLE IF NOT EXISTS production_daily (
@@ -121,6 +123,14 @@ def init_db():
                 notes        TEXT    DEFAULT ''
             );
         """)
+
+        # ── Productions: migrate new columns ─────────────────
+        prod_cols = [r[1] for r in conn.execute("PRAGMA table_info(productions)").fetchall()]
+        if 'script_chars' not in prod_cols:
+            conn.execute("ALTER TABLE productions ADD COLUMN script_chars INTEGER DEFAULT 0")
+        if 'arc_chars' not in prod_cols:
+            conn.execute("ALTER TABLE productions ADD COLUMN arc_chars TEXT DEFAULT '{}'")
+        conn.commit()
 
 
 init_db()
@@ -635,6 +645,13 @@ def enrich_production(p):
     d['arcs_done_count'] = len(d['arcs_done_list'])
     d['bdays']           = business_days_since(d['started_at'])
     d['dl_color']        = deadline_color(d['bdays'], d['status'])
+    d['script_chars']    = d.get('script_chars') or 0
+    raw_arc              = d.get('arc_chars') or '{}'
+    try:
+        d['arc_chars_map'] = {int(k): v for k,v in json.loads(raw_arc).items()}
+    except Exception:
+        d['arc_chars_map'] = {}
+    d['arc_chars_avg']   = round(d['script_chars'] / d['total_arcs']) if d['script_chars'] and d['total_arcs'] else 0
     d['arc_pct']         = int(d['arcs_done_count'] / d['total_arcs'] * 100) if d['total_arcs'] else 0
     d['total_chars']     = prod_total_chars(d['id'])
     d['today_chars']     = prod_today_chars(d['id'])
@@ -694,13 +711,20 @@ def production_new():
             msg = " | ".join(errors)
             msg_type = "error"
         else:
-            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            now          = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            script_chars = int(request.form.get("script_chars", "0") or "0")
+            arc_chars_raw = request.form.get("arc_chars", "{}")
+            # Validate JSON
+            try:
+                json.loads(arc_chars_raw)
+            except Exception:
+                arc_chars_raw = "{}"
             with get_db() as c:
                 c.execute(
                     ("INSERT INTO productions "
-                     "(title,producer,total_arcs,arcs_done,status,started_at,updated_at,notes) "
-                     "VALUES (?,?,?,'[]','iniciado',?,?,?)"),
-                    (title, producer, int(total_arcs), now, now, notes)
+                     "(title,producer,total_arcs,arcs_done,status,started_at,updated_at,notes,script_chars,arc_chars) "
+                     "VALUES (?,?,?,'[]','iniciado',?,?,?,?,?)"),
+                    (title, producer, int(total_arcs), now, now, notes, script_chars, arc_chars_raw)
                 )
             msg      = f"✔  Produção registrada: {title}"
             msg_type = "success"
@@ -728,7 +752,6 @@ def production_detail(pid):
                            daily=[dict(d) for d in daily],
                            today=today,
                            active="productions")
-
 
 @app.route("/productions/<int:pid>/arc", methods=["POST"])
 def production_arc(pid):
