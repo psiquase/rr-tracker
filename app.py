@@ -651,6 +651,11 @@ def enrich_production(p):
         d['arc_chars_map'] = {int(k): v for k,v in json.loads(raw_arc).items()}
     except Exception:
         d['arc_chars_map'] = {}
+    # Use sum of arc_chars_map as the authoritative total (FALAS [US] only)
+    # Fall back to script_chars if no per-arc data exists
+    arc_map_total = sum(d['arc_chars_map'].values()) if d['arc_chars_map'] else 0
+    if arc_map_total > 0:
+        d['script_chars'] = arc_map_total
     d['arc_chars_avg']   = round(d['script_chars'] / d['total_arcs']) if d['script_chars'] and d['total_arcs'] else 0
     d['arc_pct']         = int(d['arcs_done_count'] / d['total_arcs'] * 100) if d['total_arcs'] else 0
     d['total_chars']     = prod_total_chars(d['id'])
