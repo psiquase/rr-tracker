@@ -144,7 +144,14 @@
               ARCO {{ i }}
             </span>
             <span class="arc-chars-badge" data-arc="{{ i }}"
-                  style="font-size:9px;color:var(--gray2);display:none"></span>
+                  style="font-size:9px;
+                         {% if prod.arc_chars_map.get(i) %}
+                           color:{% if prod.arc_chars_map.get(i, 0) >= 5000 %}var(--green){% elif prod.arc_chars_map.get(i, 0) >= 3000 %}var(--yellow){% else %}var(--red){% endif %};
+                         {% else %}
+                           color:var(--gray2);display:none;
+                         {% endif %}">
+              {% if prod.arc_chars_map.get(i) %}{{ "{:,}".format(prod.arc_chars_map.get(i)).replace(",",".") }} ch{% endif %}
+            </span>
             <span style="font-size:9px;letter-spacing:1px;
                          color:{% if done %}var(--g-dark){% else %}var(--gray){% endif %}">
               {% if done %}✔ GRAVADO{% else %}PENDENTE{% endif %}
@@ -242,6 +249,39 @@
         <div style="margin-top:8px;font-size:10px;color:var(--red)">⚠ prazo excedido em {{ prod.bdays - 4 }} dia(s)</div>
       {% endif %}
     </div>
+
+    {% if prod.script_chars > 0 %}
+    <!-- Chars from script analysis saved at creation -->
+    <div style="margin-top:14px;background:var(--card);border:2px solid #bb44ff;padding:14px 16px">
+      <div style="font-size:9px;color:#bb44ff;letter-spacing:1px;margin-bottom:10px">◆ ROTEIRO CADASTRADO</div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">TOTAL CHARS</div>
+          <span style="font-family:var(--font-vt);font-size:24px;color:#bb44ff">{{ "{:,}".format(prod.script_chars).replace(",",".") }}</span>
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">MÉDIA/ARCO</div>
+          <span style="font-family:var(--font-vt);font-size:24px;color:var(--white)">{{ "{:,}".format(prod.arc_chars_avg).replace(",",".") }}</span>
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">DURAÇÃO ~</div>
+          <span style="font-family:var(--font-vt);font-size:24px;color:var(--green)">{{ (prod.script_chars / 1000 * 5) | round(0) | int }}</span>
+          <span style="font-size:9px;color:var(--gray2)"> min</span>
+        </div>
+      </div>
+      <!-- Progress bar based on arcs done -->
+      <div style="margin-top:12px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:9px;color:var(--gray2)">
+          <span>CARACTERES GRAVADOS (est.)</span>
+          <span style="color:#bb44ff">{{ "{:,}".format(prod.arcs_done_count * prod.arc_chars_avg).replace(",",".") }} / {{ "{:,}".format(prod.script_chars).replace(",",".") }}</span>
+        </div>
+        <div style="background:var(--card2);height:8px;border:1px solid var(--border2)">
+          <div style="height:100%;background:#bb44ff;width:{{ prod.arc_pct }}%"></div>
+        </div>
+        <div style="font-size:9px;color:#bb44ff;text-align:right;margin-top:3px">{{ prod.arc_pct }}%</div>
+      </div>
+    </div>
+    {% endif %}
 
     {% if prod.notes %}
     <div style="margin-top:14px;background:var(--card);border:1px solid var(--border2);
@@ -354,7 +394,15 @@
     });
   }
 
-  if (loadArcChars() && Object.keys(arcCharsMap).length > 0) {
+  // Seed from DB if available (persistent, no sessionStorage needed)
+  var DB_ARC_CHARS = {{ prod.arc_chars_map | tojson }};
+  if (Object.keys(DB_ARC_CHARS).length > 0) {
+    // Convert string keys to int
+    var intMap = {};
+    Object.keys(DB_ARC_CHARS).forEach(function(k){ intMap[parseInt(k)] = DB_ARC_CHARS[k]; });
+    saveArcChars(intMap);
+    updateChecklistProgress();
+  } else if (loadArcChars() && Object.keys(arcCharsMap).length > 0) {
     updateChecklistProgress();
   }
 
