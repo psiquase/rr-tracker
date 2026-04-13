@@ -193,37 +193,48 @@
 
   if (!scriptInput) return;
 
-  function detectArcs(text) {
-    // Line-by-line parser — handles "Arco 1", "[ARCO 1]", any spacing
-    var lines     = text.split(/\r?\n/);
-    var arcs      = [];
-    var currentNum  = null;
-    var currentLines = [];
-    var arcRegex  = /^\s*\[?(?:ARCO|Arco)\s+(\d+)\]?\s*$/i;
-
-    lines.forEach(function(line) {
-      var m = line.match(arcRegex);
-      if (m) {
-        if (currentNum !== null) {
-          arcs.push({ num: currentNum, chars: currentLines.join('\n').length });
+  function extractUSChars(lines) {
+    // Find FALAS [US] column index in the arc's header row
+    var usColIdx = -1, headerIdx = -1;
+    for (var i = 0; i < lines.length; i++) {
+      var cols = lines[i].split('\t');
+      for (var j = 0; j < cols.length; j++) {
+        if (cols[j].indexOf('FALAS [US]') !== -1 || cols[j].indexOf('FALAS US') !== -1) {
+          usColIdx = j; headerIdx = i; break;
         }
-        currentNum   = parseInt(m[1]);
-        currentLines = [];
-      } else if (currentNum !== null) {
-        currentLines.push(line);
       }
-    });
-
-    // Push last arc
-    if (currentNum !== null) {
-      arcs.push({ num: currentNum, chars: currentLines.join('\n').length });
+      if (usColIdx !== -1) break;
     }
+    if (usColIdx === -1) return lines.join('\n').length; // fallback: full text
+    var total = 0;
+    for (var i = headerIdx + 1; i < lines.length; i++) {
+      var cols = lines[i].split('\t');
+      if (cols.length > usColIdx) {
+        var dialogue = cols[usColIdx].trim();
+        if (dialogue && dialogue !== '///' && dialogue.toUpperCase().indexOf('FALAS') === -1) {
+          total += dialogue.length;
+        }
+      }
+    }
+    return total;
+  }
 
+  function detectArcs(text) {
+    var lines = text.split(/\r?\n/);
+    var arcs = [], curNum = null, curLines = [];
+    var arcRe = /^\s*\[?(?:ARCO|Arco)\s+(\d+)\]?\s*$/i;
+    lines.forEach(function(line) {
+      var m = line.match(arcRe);
+      if (m) {
+        if (curNum !== null) arcs.push({ num: curNum, lines: curLines.slice() });
+        curNum = parseInt(m[1]); curLines = [];
+      } else if (curNum !== null) { curLines.push(line); }
+    });
+    if (curNum !== null) arcs.push({ num: curNum, lines: curLines.slice() });
     if (arcs.length === 0) return { count: 0, map: {} };
-
     var map = {}, maxNum = 0;
     arcs.forEach(function(a) {
-      map[a.num] = a.chars;
+      map[a.num] = extractUSChars(a.lines);
       if (a.num > maxNum) maxNum = a.num;
     });
     return { count: maxNum, map: map };
@@ -251,7 +262,7 @@
       detectNone.style.display   = 'none';
       manualGroup.style.display  = 'none';
       detectCount.textContent    = arcCount;
-      var total = countTotalChars(text);
+      var total = Object.values(detected.map).reduce(function(a,b){return a+b;},0);
       detectChars.textContent    = '· ' + total.toLocaleString('pt-BR') + ' chars · ~' + (total/1000*5).toFixed(0) + ' min';
       hiddenArcs.value           = arcCount;
       hiddenChars.value          = total;
