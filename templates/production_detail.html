@@ -7,20 +7,10 @@
 
 {% set sc = prod.dl_color %}
 {% set sc_var = 'var(--green)' if sc=='green' else 'var(--yellow)' if sc=='yellow' else 'var(--red)' %}
-{% set status_labels = {
-  'iniciado':    'INICIADO',
-  'em_andamento':'EM ANDAMENTO',
-  'pausado':     'PAUSADO',
-  'concluido':   'CONCLUÍDO'
-} %}
-{% set status_colors = {
-  'iniciado':    'var(--blue)',
-  'em_andamento':'var(--green)',
-  'pausado':     'var(--yellow)',
-  'concluido':   'var(--gray2)'
-} %}
+{% set status_labels = {'iniciado':'INICIADO','em_andamento':'EM ANDAMENTO','pausado':'PAUSADO','concluido':'CONCLUÍDO'} %}
+{% set status_colors = {'iniciado':'var(--blue)','em_andamento':'var(--green)','pausado':'var(--yellow)','concluido':'var(--gray2)'} %}
 
-<!-- ── Top info bar ──────────────────────────────────────── -->
+<!-- ── Top info bar ───────────────────────────────────────── -->
 <div style="background:var(--panel);border:1px solid var(--border2);
             padding:14px 18px;margin-bottom:20px;
             display:flex;flex-wrap:wrap;gap:20px;align-items:center">
@@ -30,7 +20,7 @@
     <div style="font-size:13px;color:var(--white);font-weight:bold">{{ prod.producer }}</div>
   </div>
 
-  <div style="width:1px;height:40px;background:var(--border2)"></div>
+  <div style="width:1px;height:36px;background:var(--border2)"></div>
 
   <div>
     <div style="font-size:9px;color:var(--gray2);margin-bottom:3px;letter-spacing:1px">STATUS</div>
@@ -40,7 +30,7 @@
     </span>
   </div>
 
-  <div style="width:1px;height:40px;background:var(--border2)"></div>
+  <div style="width:1px;height:36px;background:var(--border2)"></div>
 
   <div>
     <div style="font-size:9px;color:var(--gray2);margin-bottom:3px;letter-spacing:1px">INÍCIO</div>
@@ -48,18 +38,18 @@
   </div>
 
   {% if prod.status == 'concluido' and prod.completed_at %}
-  <div style="width:1px;height:40px;background:var(--border2)"></div>
+  <div style="width:1px;height:36px;background:var(--border2)"></div>
   <div>
     <div style="font-size:9px;color:var(--gray2);margin-bottom:3px;letter-spacing:1px">CONCLUSÃO</div>
     <div style="font-size:12px;color:var(--green)">{{ prod.completed_at[:10] }}</div>
   </div>
   {% endif %}
 
-  <div style="width:1px;height:40px;background:var(--border2)"></div>
+  <div style="width:1px;height:36px;background:var(--border2)"></div>
 
   <div>
     <div style="font-size:9px;color:var(--gray2);margin-bottom:3px;letter-spacing:1px">
-      {% if prod.status == 'concluido' %}DURAÇÃO TOTAL{% else %}DIAS EM CURSO{% endif %}
+      {% if prod.status=='concluido' %}DURAÇÃO{% else %}DIAS EM CURSO{% endif %}
     </div>
     <div style="display:flex;align-items:baseline;gap:4px">
       <span style="font-family:var(--font-vt);font-size:32px;color:{{ sc_var }};line-height:1">
@@ -69,52 +59,30 @@
     </div>
   </div>
 
-  {% if is_admin %}
-  <div style="width:1px;height:40px;background:var(--border2)"></div>
-  <div>
-    <div style="font-size:9px;color:var(--gray2);margin-bottom:3px;letter-spacing:1px">PRAZO (4 d.u.)</div>
-    {% if prod.status == 'concluido' %}
-      <span style="color:var(--green);font-size:11px">✔ CONCLUÍDO</span>
-    {% elif prod.bdays <= 4 %}
-      <span style="color:{{ sc_var }};font-size:11px">{{ 4 - prod.bdays }}d restantes</span>
-    {% else %}
-      <span style="color:var(--red);font-size:11px">⚠ +{{ prod.bdays - 4 }}d atraso</span>
-    {% endif %}
-  </div>
-  {% endif %}
-
-  <!-- Status action buttons -->
+  <!-- Action buttons -->
   <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
     {% if prod.status not in ('em_andamento','iniciado') %}
       <form method="POST" action="/productions/{{ prod.id }}/status" style="margin:0">
         <input type="hidden" name="status" value="em_andamento"/>
-        <button type="submit" class="action-btn green-btn" style="font-size:10px;padding:7px 16px">
-          ▶ RETOMAR
-        </button>
+        <button type="submit" class="action-btn green-btn" style="font-size:10px;padding:7px 16px">▶ RETOMAR</button>
       </form>
     {% endif %}
     {% if prod.status not in ('pausado','concluido') %}
       <form method="POST" action="/productions/{{ prod.id }}/status" style="margin:0">
         <input type="hidden" name="status" value="pausado"/>
-        <button type="submit" class="action-btn" style="font-size:10px;padding:7px 16px;border-color:var(--yellow);color:var(--yellow)">
-          ⏸ PAUSAR
-        </button>
+        <button type="submit" class="action-btn" style="font-size:10px;padding:7px 16px;border-color:var(--yellow);color:var(--yellow)">⏸ PAUSAR</button>
       </form>
     {% endif %}
     {% if prod.status != 'concluido' %}
       <form method="POST" action="/productions/{{ prod.id }}/status" style="margin:0">
         <input type="hidden" name="status" value="concluido"/>
-        <button type="submit" class="action-btn" style="font-size:10px;padding:7px 16px;border-color:var(--gray);color:var(--gray2)">
-          ✔ CONCLUIR
-        </button>
+        <button type="submit" class="action-btn" style="font-size:10px;padding:7px 16px;border-color:var(--gray);color:var(--gray2)">✔ CONCLUIR</button>
       </form>
     {% endif %}
     {% if is_admin %}
       <form method="POST" action="/productions/{{ prod.id }}/delete" style="margin:0"
             onsubmit="return confirm('Deletar esta produção?')">
-        <button type="submit" class="action-btn" style="font-size:10px;padding:7px 16px;border-color:var(--r-dark);color:var(--r-dark)">
-          ✕ DELETAR
-        </button>
+        <button type="submit" class="action-btn" style="font-size:10px;padding:7px 16px;border-color:var(--r-dark);color:var(--r-dark)">✕</button>
       </form>
     {% endif %}
   </div>
@@ -122,13 +90,14 @@
 </div>
 
 
-<!-- ── Arc checklist ─────────────────────────────────────── -->
+<!-- ── Main grid: checklist + countdown ──────────────────── -->
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
 
+  <!-- LEFT: Arc checklist -->
   <div>
     <div style="margin-bottom:10px"><span class="section-title red">◆ CHECKLIST DE ARCOS</span></div>
 
-    <!-- Progress bar -->
+    <!-- Arc progress bar -->
     <div style="background:var(--card);border:1px solid var(--border2);padding:14px 16px;margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;margin-bottom:8px">
         <span style="font-size:10px;color:var(--gray2);letter-spacing:1px">PROGRESSO</span>
@@ -174,7 +143,6 @@
                          {% if done %}opacity:.7{% endif %}">
               ARCO {{ i }}
             </span>
-            <!-- chars badge injected by JS if analysis available -->
             <span class="arc-chars-badge" data-arc="{{ i }}"
                   style="font-size:9px;color:var(--gray2);display:none"></span>
             <span style="font-size:9px;letter-spacing:1px;
@@ -186,7 +154,7 @@
       {% endfor %}
     </div>
 
-    <!-- ── Chars-per-arc progress (only shown after analysis) ── -->
+    <!-- Chars-per-arc progress (only shown after analysis) -->
     <div id="arc-chars-progress" style="display:none;margin-top:12px;
          background:var(--card);border:2px solid #bb44ff">
       <div style="background:#1a0a2e;padding:8px 14px;font-size:9px;
@@ -211,106 +179,88 @@
   </div>
 
 
-  <!-- ── RIGHT: Chars + timing ───────────────────────── -->
+  <!-- RIGHT: Countdown + Timing -->
   <div>
-    <div style="margin-bottom:10px"><span class="section-title blue">◆ PROGRESSO DE CARACTERES</span></div>
+    <div style="margin-bottom:10px"><span class="section-title blue">◆ CONTAGEM REGRESSIVA</span></div>
 
-    <!-- Progress cards -->
-    <div style="background:var(--card);border:1px solid var(--border2);padding:14px 16px;margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-        <span style="font-size:10px;color:var(--gray2)">TOTAL ESCRITO</span>
-        <span style="font-size:12px;color:var(--blue)">{{ prod.total_chars }} / 20.000</span>
-      </div>
-      <div style="background:var(--card2);height:10px;border:1px solid var(--border2);margin-bottom:14px">
-        <div style="height:100%;background:var(--blue);width:{{ prod.chars_pct }}%"></div>
-      </div>
+    <!-- Big countdown number -->
+    <div style="background:var(--card);border:2px solid {{ sc_var }};padding:24px 20px;
+                text-align:center;margin-bottom:14px;box-shadow:4px 4px 0 rgba(0,0,0,.4)">
 
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-        <span style="font-size:10px;color:var(--gray2)">HOJE <span style="color:var(--border2)">(meta 5.000 = ~5 min)</span></span>
-        <span style="font-size:12px;color:{% if prod.today_chars >= 5000 %}var(--green){% elif prod.today_chars > 0 %}var(--yellow){% else %}var(--gray2){% endif %}">
-          {{ prod.today_chars }} / 5.000
-          {% if prod.today_chars >= 5000 %} ✔{% endif %}
-        </span>
-      </div>
-      <div style="background:var(--card2);height:8px;border:1px solid var(--border2)">
-        <div style="height:100%;background:{% if prod.today_chars >= 5000 %}var(--green){% elif prod.today_chars > 0 %}var(--yellow){% else %}var(--border2){% endif %};width:{{ prod.today_pct }}%"></div>
-      </div>
+      {% set restantes = prod.total_arcs - prod.arcs_done_count %}
+      {% if restantes == 0 %}
+        <div style="font-size:28px;color:var(--green);margin-bottom:6px">✔</div>
+        <div style="font-family:var(--font-vt);font-size:52px;color:var(--green);line-height:1">PRONTO</div>
+        <div style="font-size:11px;color:var(--green);margin-top:6px">todos os arcos gravados!</div>
+      {% else %}
+        <div style="font-size:9px;color:var(--gray2);letter-spacing:2px;margin-bottom:6px">ARCOS RESTANTES</div>
+        <div style="font-family:var(--font-vt);font-size:88px;color:{{ sc_var }};line-height:1">
+          {{ restantes }}
+        </div>
+        <div style="font-size:11px;color:var(--gray2);margin-top:8px">
+          de {{ prod.total_arcs }} arcos no total
+        </div>
+        {% if prod.arcs_done_count > 0 %}
+          <div style="margin-top:14px;font-size:10px;color:var(--green)">
+            ✔ {{ prod.arcs_done_count }} gravado{% if prod.arcs_done_count > 1 %}s{% endif %}
+          </div>
+        {% endif %}
+      {% endif %}
+
     </div>
 
-    <!-- Log form -->
-    <div style="margin-bottom:8px"><span class="section-title green">◆ REGISTRAR CARACTERES DO DIA</span></div>
-    <div style="background:var(--card);border:2px solid var(--green);margin-bottom:14px">
-      <div style="background:var(--green);padding:7px 14px;color:var(--bg);font-size:10px;font-weight:bold">
-        ✚ ADICIONAR PROGRESSO
-      </div>
-      <form method="POST" action="/productions/{{ prod.id }}/log" style="padding:12px 16px">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+    <!-- Next arc to record -->
+    {% if restantes > 0 %}
+    <div style="background:var(--card);border:1px solid var(--border2);padding:14px 16px;margin-bottom:14px">
+      <div style="font-size:9px;color:var(--gray2);letter-spacing:1px;margin-bottom:8px">◆ PRÓXIMO A GRAVAR</div>
+      {% for i in range(1, prod.total_arcs + 1) %}
+        {% if i not in prod.arcs_done_list and loop.first %}
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-family:var(--font-vt);font-size:36px;color:{{ sc_var }}">{{ i }}</span>
           <div>
-            <label style="display:block;font-size:9px;color:var(--gray2);margin-bottom:4px">DATA</label>
-            <input class="pixel-input" type="date" name="log_date" value="{{ today }}" style="padding:6px 10px"/>
-          </div>
-          <div>
-            <label style="display:block;font-size:9px;color:var(--gray2);margin-bottom:4px">CARACTERES</label>
-            <input class="pixel-input" type="number" name="chars" min="0" placeholder="0" style="padding:6px 10px"/>
+            <div style="font-size:12px;color:var(--white)">ARCO {{ i }}</div>
+            <div style="font-size:9px;color:var(--gray2)">marcar no checklist quando gravar</div>
           </div>
         </div>
-        <div style="margin-bottom:10px">
-          <label style="display:block;font-size:9px;color:var(--gray2);margin-bottom:4px">NOTAS (opcional)</label>
-          <input class="pixel-input" type="text" name="notes" placeholder="Arcos escritos hoje..." style="padding:6px 10px"/>
-        </div>
-        <button type="submit" class="action-btn green-btn" style="font-size:11px;padding:8px 18px">✔ SALVAR</button>
-      </form>
+        {% endif %}
+      {% endfor %}
     </div>
-
-    <!-- Daily history -->
-    <div style="margin-bottom:8px"><span class="section-title yellow">◆ HISTÓRICO DIÁRIO</span></div>
-    {% if daily %}
-      <div style="background:var(--card);border:1px solid var(--border2)">
-        <div style="background:var(--card2);padding:8px 14px;display:grid;
-                    grid-template-columns:1fr 1fr 2fr auto;font-size:9px;
-                    color:var(--yellow);border-bottom:2px solid var(--yellow)">
-          <span>DATA</span><span>CHARS</span><span>NOTAS</span><span></span>
-        </div>
-        {% for d in daily %}
-          <div style="padding:8px 14px;display:grid;grid-template-columns:1fr 1fr 2fr auto;
-                      border-bottom:1px solid var(--border);font-size:11px;align-items:center;gap:8px">
-            <span style="color:var(--white)">{{ d.log_date }}</span>
-            <span style="color:{% if d.chars_written >= 5000 %}var(--green){% elif d.chars_written > 0 %}var(--yellow){% else %}var(--gray2){% endif %}">
-              {{ d.chars_written }}{% if d.chars_written >= 5000 %} ✔{% endif %}
-            </span>
-            <span style="color:var(--gray2);font-size:10px">{{ d.notes or '—' }}</span>
-            <form method="POST" action="/productions/{{ prod.id }}/log/{{ d.id }}/delete"
-                  style="margin:0" onsubmit="return confirm('Deletar?')">
-              <button type="submit"
-                      style="background:none;border:1px solid var(--r-dark);color:var(--r-dark);
-                             padding:2px 7px;cursor:pointer;font-family:var(--font-pixel);font-size:10px">✕</button>
-            </form>
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="empty-state" style="padding:18px">⚠ Nenhum progresso registrado ainda.</div>
     {% endif %}
 
-    <!-- Timing info (collapsed) -->
-    <div style="margin-top:14px;background:var(--card);border:1px solid var(--border2);padding:14px 16px">
-      <div style="font-size:9px;color:var(--gray2);letter-spacing:1px;margin-bottom:8px">◆ TEMPO DE PRODUÇÃO</div>
+    <!-- Timing info -->
+    <div style="background:var(--card);border:1px solid var(--border2);padding:14px 16px">
+      <div style="font-size:9px;color:var(--gray2);letter-spacing:1px;margin-bottom:10px">◆ TEMPO DE PRODUÇÃO</div>
       <div style="display:flex;align-items:baseline;gap:6px">
         <span style="font-family:var(--font-vt);font-size:36px;color:{{ sc_var }}">{{ prod.duration_bdays }}</span>
         <span style="font-size:10px;color:var(--gray2)">
-          dias úteis {% if prod.status=='concluido' %}(concluído em {{ prod.completed_at[:10] }}){% else %}em curso{% endif %}
+          dias úteis {% if prod.status=='concluido' %}(concluído {{ prod.completed_at[:10] }}){% else %}em curso{% endif %}
         </span>
       </div>
+      {% if prod.status != 'concluido' and prod.bdays <= 4 %}
+        <div style="margin-top:8px;font-size:10px;color:var(--green)">✔ dentro do prazo</div>
+      {% elif prod.status != 'concluido' and prod.bdays > 4 %}
+        <div style="margin-top:8px;font-size:10px;color:var(--red)">⚠ prazo excedido em {{ prod.bdays - 4 }} dia(s)</div>
+      {% endif %}
     </div>
+
+    {% if prod.notes %}
+    <div style="margin-top:14px;background:var(--card);border:1px solid var(--border2);
+                padding:12px 14px;font-size:11px;color:var(--gray2);line-height:1.6">
+      <div style="font-size:9px;color:var(--gray2);letter-spacing:1px;margin-bottom:6px">◆ OBSERVAÇÕES</div>
+      {{ prod.notes }}
+    </div>
+    {% endif %}
 
   </div>
 </div>
+
 
 <div style="margin-top:16px">
   <a href="/productions" class="action-btn gray-btn" style="font-size:11px">← VOLTAR</a>
 </div>
 
-<!-- ══ ANALISADOR DE ROTEIRO (read-only, client-side) ════════ -->
+
+<!-- ══ ANALISADOR DE ROTEIRO ═════════════════════════════════ -->
 <div style="margin-top:28px;border-top:2px solid var(--border2);padding-top:20px">
 
   <div style="margin-bottom:12px;display:flex;align-items:center;gap:12px">
@@ -319,21 +269,18 @@
   </div>
 
   <div style="background:var(--card);border:2px solid #bb44ff;box-shadow:4px 4px 0 rgba(187,68,255,.2)">
-
     <div style="background:#1a0a2e;padding:8px 14px;font-size:10px;
                 color:#bb44ff;font-weight:bold;border-bottom:1px solid #bb44ff22">
-      ◆ &nbsp;COLE O ROTEIRO ABAIXO — DETECTA AUTOMATICAMENTE OS ARCOS [ARCO 1], [ARCO 2]...
+      ◆ &nbsp;COLE O ROTEIRO — DETECTA ARCOS AUTOMATICAMENTE E CONECTA AO CHECKLIST
     </div>
-
     <div style="padding:14px 16px">
       <textarea id="roteiro-input"
-                style="width:100%;min-height:160px;background:var(--card2);
+                style="width:100%;min-height:140px;background:var(--card2);
                        border:1px solid var(--border2);color:var(--white);
                        font-family:var(--font-pixel);font-size:11px;
                        padding:10px;resize:vertical;box-sizing:border-box;
                        outline:none;line-height:1.6"
-                placeholder="Cole o roteiro aqui... Exemplo:&#10;[ARCO 1]&#10;Texto do arco 1...&#10;&#10;[ARCO 2]&#10;Texto do arco 2..."></textarea>
-
+                placeholder="Cole o roteiro aqui... (Arco 1, Arco 2... ou [ARCO 1], [ARCO 2]...)"></textarea>
       <div style="display:flex;gap:10px;margin-top:10px;align-items:center">
         <button onclick="analisarRoteiro()"
                 style="background:none;border:2px solid #bb44ff;color:#bb44ff;
@@ -350,35 +297,20 @@
         <span id="roteiro-chars" style="font-size:10px;color:var(--gray2);margin-left:auto"></span>
       </div>
     </div>
-
-    <!-- Resultado -->
     <div id="roteiro-resultado" style="display:none;border-top:1px solid var(--border2)">
-
-      <!-- Summary bar -->
-      <div id="roteiro-summary"
-           style="background:#1a0a2e;padding:10px 16px;
-                  display:flex;gap:24px;flex-wrap:wrap;font-size:10px"></div>
-
-      <!-- Arc breakdown -->
+      <div id="roteiro-summary" style="background:#1a0a2e;padding:10px 16px;display:flex;gap:24px;flex-wrap:wrap;font-size:10px"></div>
       <div id="roteiro-arcos" style="padding:14px 16px"></div>
-
     </div>
-
-    <!-- Error -->
-    <div id="roteiro-erro"
-         style="display:none;padding:12px 16px;font-size:11px;color:var(--red);
-                border-top:1px solid var(--border2)"></div>
-
+    <div id="roteiro-erro" style="display:none;padding:12px 16px;font-size:11px;color:var(--red);border-top:1px solid var(--border2)"></div>
   </div>
 </div>
+
 
 <script>
 (function() {
   var PROD_ID   = '{{ prod.id }}';
   var STORE_KEY = 'arc_chars_' + PROD_ID;
-
-  // ── Arc chars progress (shared between analyzer and checklist) ──────
-  var arcCharsMap = {};  // { arcNum: charCount }
+  var arcCharsMap = {};
 
   function saveArcChars(map) {
     try { sessionStorage.setItem(STORE_KEY, JSON.stringify(map)); } catch(e) {}
@@ -398,7 +330,6 @@
     Object.values(arcCharsMap).forEach(function(c){ total += c; });
     if (total === 0) return;
 
-    // Sum chars of checked arcs
     var done = 0;
     document.querySelectorAll('[data-arc][data-done="true"]').forEach(function(el) {
       var n = parseInt(el.getAttribute('data-arc'));
@@ -406,45 +337,37 @@
     });
 
     var pct = total > 0 ? Math.round(done / total * 100) : 0;
-
-    // Show arc-chars-progress panel
     document.getElementById('arc-chars-progress').style.display = 'block';
-    document.getElementById('arc-chars-bar').style.width = pct + '%';
-    document.getElementById('arc-chars-label').textContent =
-      done.toLocaleString('pt-BR') + ' / ' + total.toLocaleString('pt-BR');
-    document.getElementById('arc-chars-detail').textContent =
-      Object.keys(arcCharsMap).length + ' arcos mapeados pela análise';
-    document.getElementById('arc-chars-pct').textContent = pct + '%';
+    document.getElementById('arc-chars-bar').style.width        = pct + '%';
+    document.getElementById('arc-chars-label').textContent      = done.toLocaleString('pt-BR') + ' / ' + total.toLocaleString('pt-BR');
+    document.getElementById('arc-chars-detail').textContent     = Object.keys(arcCharsMap).length + ' arcos mapeados';
+    document.getElementById('arc-chars-pct').textContent        = pct + '%';
 
-    // Inject per-arc badges in checklist
     document.querySelectorAll('.arc-chars-badge').forEach(function(badge) {
       var n = parseInt(badge.getAttribute('data-arc'));
       var chars = arcCharsMap[n];
       if (chars) {
-        badge.textContent = chars.toLocaleString('pt-BR') + ' ch';
+        badge.textContent  = chars.toLocaleString('pt-BR') + ' ch';
         badge.style.display = 'inline';
-        badge.style.color = chars >= 5000 ? 'var(--green)' : chars >= 3000 ? 'var(--yellow)' : 'var(--red)';
+        badge.style.color   = chars >= 5000 ? 'var(--green)' : chars >= 3000 ? 'var(--yellow)' : 'var(--red)';
       }
     });
   }
 
-  // ── On page load: restore analysis data if available ───────────────
   if (loadArcChars() && Object.keys(arcCharsMap).length > 0) {
     updateChecklistProgress();
   }
 
-  // ── Live char counter ───────────────────────────────────────────────
-  var input      = document.getElementById('roteiro-input');
+  var input       = document.getElementById('roteiro-input');
   var charCounter = document.getElementById('roteiro-chars');
+
   if (input) {
     input.addEventListener('input', function() {
       var n = input.value.length;
-      charCounter.textContent = n > 0 ? n.toLocaleString('pt-BR') + ' caracteres colados' : '';
-      charCounter.style.color = n > 25000 ? 'var(--yellow)' : 'var(--gray2)';
+      charCounter.textContent = n > 0 ? n.toLocaleString('pt-BR') + ' chars' : '';
     });
   }
 
-  // ── Analyzer ────────────────────────────────────────────────────────
   window.analisarRoteiro = function() {
     var texto     = input.value.trim();
     var resultado = document.getElementById('roteiro-resultado');
@@ -453,7 +376,7 @@
     var arcosDiv  = document.getElementById('roteiro-arcos');
 
     resultado.style.display = 'none';
-    erro.style.display = 'none';
+    erro.style.display      = 'none';
 
     if (!texto) {
       erro.textContent = '⚠ Cole um roteiro antes de analisar.';
@@ -461,50 +384,34 @@
       return;
     }
 
-    // Parse arcs — supports [ARCO N] and plain "Arco N" on its own line
-    var pattern = /(?:\r?\n|\r|^)\s*(?:\[?(?:ARCO|Arco)\s+(\d+)\]?)\s*(?:\r?\n|\r|$)/gim;
-    var splitPattern = /(?:\r?\n|^)\s*\[?(?:ARCO|Arco)\s+(\d+)\]?\s*(?:\r?\n|$)/im;
-
-    // Split text by arc markers
-    var rawParts = texto.split(/(?:\r?\n)\s*(?:\[?(?:ARCO|Arco)\s+(\d+)\]?)\s*(?=\r?\n)/i);
-
-    // Fallback: split by "Arco N" standalone line
+    // Parse arcs
+    var rawParts = texto.split(/\r?\n\s*\[?(?:ARCO|Arco)\s+(\d+)\]?\s*(?=\r?\n)/i);
     if (rawParts.length < 3) {
       rawParts = texto.split(/\r?\n(?=\s*(?:Arco|ARCO)\s+\d+\s*\r?\n)/i);
-      // Rebuild pairs
       var pairs = [''];
       rawParts.forEach(function(chunk) {
         var m = chunk.match(/^\s*(?:Arco|ARCO)\s+(\d+)\s*\r?\n([\s\S]*)/i);
         if (m) { pairs.push(m[1]); pairs.push(m[2]); }
         else if (pairs.length === 1) { pairs[0] += chunk; }
-        else { pairs[pairs.length - 1] += '\n' + chunk; }
+        else { pairs[pairs.length-1] += '\n' + chunk; }
       });
       if (pairs.length >= 3) rawParts = pairs;
     }
-
-    // Fallback: [ARCO N] format
     if (rawParts.length < 3) {
       rawParts = texto.split(/\[ARCO\s+(\d+)\]/i);
     }
 
     if (rawParts.length < 3) {
-      erro.innerHTML = '⚠ Nenhum marcador de arco encontrado.<br>'
-        + '<span style="color:var(--gray2);font-size:10px">'
-        + 'Formatos aceitos: <strong>[ARCO 1]</strong> ou <strong>Arco 1</strong> em linha separada.</span>';
+      erro.innerHTML = '⚠ Nenhum marcador encontrado.<br><span style="color:var(--gray2);font-size:10px">Use: [ARCO 1] ou Arco 1 em linha separada.</span>';
       erro.style.display = 'block';
       return;
     }
 
-    var newMap = {};
-    var arcos  = [];
-    var totalChars = 0;
-
+    var newMap = {}, arcos = [], totalChars = 0;
     for (var i = 1; i < rawParts.length; i += 2) {
-      var numStr = rawParts[i];
-      if (numStr === undefined || numStr === null) continue;
-      var num    = parseInt(numStr);
+      var num = parseInt(rawParts[i]);
       if (isNaN(num)) continue;
-      var content = (rawParts[i + 1] || '').trim();
+      var content = (rawParts[i+1] || '').trim();
       var chars   = content.length;
       totalChars += chars;
       newMap[num]  = chars;
@@ -512,43 +419,40 @@
     }
 
     if (arcos.length === 0) {
-      erro.textContent = '⚠ Não foi possível extrair os arcos. Verifique o formato do roteiro.';
+      erro.textContent = '⚠ Não foi possível extrair os arcos.';
       erro.style.display = 'block';
       return;
     }
 
-    arcos.sort(function(a, b){ return a.num - b.num; });
-
-    // Save to sessionStorage + update checklist
+    arcos.sort(function(a,b){ return a.num - b.num; });
     saveArcChars(newMap);
     updateChecklistProgress();
 
-    // Summary bar
     var avgChars = Math.round(totalChars / arcos.length);
     var avgMins  = (totalChars / 1000 * 5).toFixed(1);
     summary.innerHTML =
       '<span style="color:var(--gray2)">◆ ARCOS: <span style="color:#bb44ff;font-family:var(--font-vt);font-size:18px">' + arcos.length + '</span></span>' +
       '<span style="color:var(--gray2)">◆ TOTAL: <span style="color:var(--white);font-family:var(--font-vt);font-size:18px">' + totalChars.toLocaleString('pt-BR') + '</span> chars</span>' +
-      '<span style="color:var(--gray2)">◆ MÉDIA/ARCO: <span style="color:#bb44ff;font-family:var(--font-vt);font-size:18px">' + avgChars.toLocaleString('pt-BR') + '</span></span>' +
-      '<span style="color:var(--gray2)">◆ ~DURAÇÃO: <span style="color:var(--green);font-family:var(--font-vt);font-size:18px">' + avgMins + '</span> min</span>';
+      '<span style="color:var(--gray2)">◆ MÉDIA: <span style="color:#bb44ff;font-family:var(--font-vt);font-size:18px">' + avgChars.toLocaleString('pt-BR') + '</span>/arco</span>' +
+      '<span style="color:var(--gray2)">◆ DURAÇÃO: <span style="color:var(--green);font-family:var(--font-vt);font-size:18px">' + avgMins + '</span> min</span>';
 
-    // Arc cards
     var maxChars = Math.max.apply(null, arcos.map(function(a){ return a.chars; }));
-    var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">';
+    var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">';
     arcos.forEach(function(a) {
       var pct   = maxChars > 0 ? Math.round(a.chars / maxChars * 100) : 0;
       var color = a.chars >= 5000 ? 'var(--green)' : a.chars >= 3000 ? 'var(--yellow)' : 'var(--red)';
       var mins  = (a.chars / 1000 * 5).toFixed(1);
+      var isDone = document.querySelector('[data-arc="' + a.num + '"][data-done="true"]') !== null;
       html +=
-        '<div style="background:var(--card2);border:1px solid var(--border2);padding:10px 12px">' +
+        '<div style="background:var(--card2);border:1px solid ' + (isDone ? 'var(--green)' : 'var(--border2)') + ';padding:10px 12px;' + (isDone ? 'opacity:.6' : '') + '">' +
           '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">' +
-            '<span style="font-size:11px;color:var(--white);font-weight:bold">ARCO ' + a.num + '</span>' +
-            '<span style="font-size:10px;color:' + color + '">' + a.chars.toLocaleString('pt-BR') + ' chars</span>' +
+            '<span style="font-size:11px;color:' + (isDone ? 'var(--green)' : 'var(--white)') + '">' + (isDone ? '✔ ' : '') + 'ARCO ' + a.num + '</span>' +
+            '<span style="font-size:10px;color:' + color + '">' + a.chars.toLocaleString('pt-BR') + '</span>' +
           '</div>' +
-          '<div style="background:var(--card);height:6px;border:1px solid var(--border2);margin-bottom:6px">' +
+          '<div style="background:var(--card);height:5px;border:1px solid var(--border2);margin-bottom:5px">' +
             '<div style="height:100%;background:' + color + ';width:' + pct + '%"></div>' +
           '</div>' +
-          '<div style="font-size:9px;color:var(--gray2)">~' + mins + ' min de vídeo</div>' +
+          '<div style="font-size:9px;color:var(--gray2)">~' + mins + ' min</div>' +
         '</div>';
     });
     html += '</div>';
@@ -559,15 +463,12 @@
   window.limparAnalise = function() {
     if (input) input.value = '';
     document.getElementById('roteiro-resultado').style.display = 'none';
-    document.getElementById('roteiro-erro').style.display    = 'none';
-    document.getElementById('roteiro-chars').textContent      = '';
-    // Clear stored data and hide progress
+    document.getElementById('roteiro-erro').style.display      = 'none';
+    document.getElementById('roteiro-chars').textContent       = '';
     try { sessionStorage.removeItem(STORE_KEY); } catch(e) {}
     arcCharsMap = {};
     document.getElementById('arc-chars-progress').style.display = 'none';
-    document.querySelectorAll('.arc-chars-badge').forEach(function(b){
-      b.style.display = 'none'; b.textContent = '';
-    });
+    document.querySelectorAll('.arc-chars-badge').forEach(function(b){ b.style.display='none'; b.textContent=''; });
   };
 })();
 </script>
