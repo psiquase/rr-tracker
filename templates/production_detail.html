@@ -432,46 +432,27 @@
       return;
     }
 
-    // Parse arcs
-    var rawParts = texto.split(/\r?\n\s*\[?(?:ARCO|Arco)\s+(\d+)\]?\s*(?=\r?\n)/i);
-    if (rawParts.length < 3) {
-      rawParts = texto.split(/\r?\n(?=\s*(?:Arco|ARCO)\s+\d+\s*\r?\n)/i);
-      var pairs = [''];
-      rawParts.forEach(function(chunk) {
-        var m = chunk.match(/^\s*(?:Arco|ARCO)\s+(\d+)\s*\r?\n([\s\S]*)/i);
-        if (m) { pairs.push(m[1]); pairs.push(m[2]); }
-        else if (pairs.length === 1) { pairs[0] += chunk; }
-        else { pairs[pairs.length-1] += '\n' + chunk; }
-      });
-      if (pairs.length >= 3) rawParts = pairs;
-    }
-    if (rawParts.length < 3) {
-      rawParts = texto.split(/\[ARCO\s+(\d+)\]/i);
-    }
+    // Line-by-line arc parser
+    var lines2 = texto.split(/\r?\n/);
+    var arcos = [], cur2 = null, curLines2 = [];
+    var arcRe2 = /^\s*\[?(?:ARCO|Arco)\s+(\d+)\]?\s*$/i;
+    lines2.forEach(function(line) {
+      var m = line.match(arcRe2);
+      if (m) {
+        if (cur2 !== null) arcos.push({ num: cur2, chars: curLines2.join('\n').length });
+        cur2 = parseInt(m[1]); curLines2 = [];
+      } else if (cur2 !== null) { curLines2.push(line); }
+    });
+    if (cur2 !== null) arcos.push({ num: cur2, chars: curLines2.join('\n').length });
 
-    if (rawParts.length < 3) {
+    if (arcos.length === 0) {
       erro.innerHTML = '⚠ Nenhum marcador encontrado.<br><span style="color:var(--gray2);font-size:10px">Use: [ARCO 1] ou Arco 1 em linha separada.</span>';
       erro.style.display = 'block';
       return;
     }
 
-    var newMap = {}, arcos = [], totalChars = 0;
-    for (var i = 1; i < rawParts.length; i += 2) {
-      var num = parseInt(rawParts[i]);
-      if (isNaN(num)) continue;
-      var content = (rawParts[i+1] || '').trim();
-      var chars   = content.length;
-      totalChars += chars;
-      newMap[num]  = chars;
-      arcos.push({ num: num, chars: chars });
-    }
-
-    if (arcos.length === 0) {
-      erro.textContent = '⚠ Não foi possível extrair os arcos.';
-      erro.style.display = 'block';
-      return;
-    }
-
+    var newMap = {}, totalChars = 0;
+    arcos.forEach(function(a){ newMap[a.num] = a.chars; totalChars += a.chars; });
     arcos.sort(function(a,b){ return a.num - b.num; });
     saveArcChars(newMap);
     updateChecklistProgress();
