@@ -89,8 +89,10 @@
           <span style="font-size:9px;color:var(--gray2);display:block;margin-top:3px">Máximo 15 arcos</span>
         </div>
 
-        <!-- Hidden field that carries the final arc count -->
+        <!-- Hidden fields for arc count and script chars -->
         <input type="hidden" name="total_arcs" id="total-arcs-hidden" value="11"/>
+        <input type="hidden" name="script_chars" id="script-chars-hidden" value="0"/>
+        <input type="hidden" name="arc_chars" id="arc-chars-hidden" value="{}"/>
 
         <div class="field-group">
           <label class="field-label">◆ OBSERVAÇÕES <span style="color:var(--gray2)">(opcional)</span></label>
@@ -178,39 +180,44 @@
 
 <script>
 (function(){
-  var scriptInput  = document.getElementById('script-input');
-  var hiddenArcs   = document.getElementById('total-arcs-hidden');
-  var manualInput  = document.getElementById('manual-arcs-input');
-  var detectResult = document.getElementById('arc-detect-result');
-  var detectNone   = document.getElementById('arc-detect-none');
-  var detectCount  = document.getElementById('arc-detect-count');
-  var detectChars  = document.getElementById('arc-detect-chars');
-  var manualGroup  = document.getElementById('manual-arcs-group');
+  var scriptInput   = document.getElementById('script-input');
+  var hiddenArcs    = document.getElementById('total-arcs-hidden');
+  var hiddenChars   = document.getElementById('script-chars-hidden');
+  var hiddenArcMap  = document.getElementById('arc-chars-hidden');
+  var manualInput   = document.getElementById('manual-arcs-input');
+  var detectResult  = document.getElementById('arc-detect-result');
+  var detectNone    = document.getElementById('arc-detect-none');
+  var detectCount   = document.getElementById('arc-detect-count');
+  var detectChars   = document.getElementById('arc-detect-chars');
+  var manualGroup   = document.getElementById('manual-arcs-group');
 
   if (!scriptInput) return;
 
-  // Also save to sessionStorage for the production detail page to pick up
   function detectArcs(text) {
-    var pattern = /(?:\r?\n)\s*\[?(?:ARCO|Arco)\s+(\d+)\]?\s*(?:\r?\n)/g;
-    var nums = [];
-    var m;
-    // Try the line-based split
-    var parts = text.split(/\r?\n\s*\[?(?:ARCO|Arco)\s+(\d+)\]?\s*(?:\r?\n)/i);
-    if (parts.length >= 3) {
-      for (var i = 1; i < parts.length; i += 2) {
-        var n = parseInt(parts[i]);
-        if (!isNaN(n)) nums.push(n);
-      }
+    // Returns {count, map: {arcNum: chars}}
+    var rawParts = text.split(/\r?\n\s*\[?(?:ARCO|Arco)\s+(\d+)\]?\s*(?=\r?\n)/i);
+    if (rawParts.length < 3) {
+      var chunks = text.split(/\r?\n(?=\s*(?:Arco|ARCO)\s+\d+\s*\r?\n)/i);
+      var pairs = [''];
+      chunks.forEach(function(chunk) {
+        var m = chunk.match(/^\s*(?:Arco|ARCO)\s+(\d+)\s*\r?\n([\s\S]*)/i);
+        if (m) { pairs.push(m[1]); pairs.push(m[2]); }
+        else if (pairs.length===1) { pairs[0]+=chunk; }
+        else { pairs[pairs.length-1]+='\n'+chunk; }
+      });
+      if (pairs.length >= 3) rawParts = pairs;
     }
-    // Also try [ARCO N] inline
-    if (nums.length === 0) {
-      var parts2 = text.split(/\[ARCO\s+(\d+)\]/i);
-      for (var j = 1; j < parts2.length; j += 2) {
-        var n2 = parseInt(parts2[j]);
-        if (!isNaN(n2)) nums.push(n2);
-      }
+    if (rawParts.length < 3) rawParts = text.split(/\[ARCO\s+(\d+)\]/i);
+    if (rawParts.length < 3) return { count: 0, map: {} };
+    var map = {}, maxNum = 0;
+    for (var i = 1; i < rawParts.length; i += 2) {
+      var num = parseInt(rawParts[i]);
+      if (isNaN(num)) continue;
+      var chars = (rawParts[i+1]||'').trim().length;
+      map[num] = chars;
+      if (num > maxNum) maxNum = num;
     }
-    return nums.length > 0 ? Math.max.apply(null, nums) : 0;
+    return { count: maxNum, map: map };
   }
 
   function countTotalChars(text) {
@@ -228,7 +235,8 @@
       hiddenArcs.value = manualInput.value || '11';
       return;
     }
-    var arcCount = detectArcs(text);
+    var detected = detectArcs(text);
+    var arcCount = detected.count;
     if (arcCount > 0) {
       detectResult.style.display = 'block';
       detectNone.style.display   = 'none';
@@ -236,8 +244,9 @@
       detectCount.textContent    = arcCount;
       var total = countTotalChars(text);
       detectChars.textContent    = '· ' + total.toLocaleString('pt-BR') + ' chars · ~' + (total/1000*5).toFixed(0) + ' min';
-      hiddenArcs.value = arcCount;
-      // Store script in sessionStorage keyed by title (will re-key after save)
+      hiddenArcs.value           = arcCount;
+      hiddenChars.value          = total;
+      hiddenArcMap.value         = JSON.stringify(detected.map);
       try { sessionStorage.setItem('pending_script', text); } catch(e) {}
     } else {
       detectResult.style.display = 'none';
