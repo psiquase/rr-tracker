@@ -252,6 +252,7 @@
 
     {% if prod.script_chars > 0 %}
     <!-- Chars from script analysis saved at creation -->
+    {% set meta_dia = (prod.script_chars / 4) | round(0) | int %}
     <div style="margin-top:14px;background:var(--card);border:2px solid #bb44ff;padding:14px 16px">
       <div style="font-size:9px;color:#bb44ff;letter-spacing:1px;margin-bottom:10px">◆ ROTEIRO CADASTRADO</div>
       <div style="display:flex;gap:20px;flex-wrap:wrap">
@@ -267,6 +268,12 @@
           <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">DURAÇÃO ~</div>
           <span style="font-family:var(--font-vt);font-size:24px;color:var(--green)">{{ (prod.script_chars / 1000 * 5) | round(0) | int }}</span>
           <span style="font-size:9px;color:var(--gray2)"> min</span>
+        </div>
+        <div style="border-left:2px solid #bb44ff33;padding-left:20px">
+          <div style="font-size:9px;color:var(--yellow);margin-bottom:2px;letter-spacing:1px">META/DIA <span style="color:var(--gray2)">(÷4 dias)</span></div>
+          <span style="font-family:var(--font-vt);font-size:24px;color:var(--yellow)">{{ "{:,}".format(meta_dia).replace(",",".") }}</span>
+          <span style="font-size:9px;color:var(--gray2)"> chars</span>
+          <div style="font-size:9px;color:var(--gray2);margin-top:2px">~{{ (meta_dia / 1000 * 5) | round(1) }} min/dia</div>
         </div>
       </div>
       <!-- Progress bar based on arcs done -->
@@ -432,6 +439,29 @@
       return;
     }
 
+    function extractUSChars(lines) {
+      var usColIdx = -1, headerIdx = -1;
+      for (var i = 0; i < lines.length; i++) {
+        var cols = lines[i].split('\t');
+        for (var j = 0; j < cols.length; j++) {
+          if (cols[j].indexOf('FALAS [US]') !== -1 || cols[j].indexOf('FALAS US') !== -1) {
+            usColIdx = j; headerIdx = i; break;
+          }
+        }
+        if (usColIdx !== -1) break;
+      }
+      if (usColIdx === -1) return lines.join('\n').length;
+      var total = 0;
+      for (var i = headerIdx + 1; i < lines.length; i++) {
+        var cols = lines[i].split('\t');
+        if (cols.length > usColIdx) {
+          var d = cols[usColIdx].trim();
+          if (d && d !== '///' && d.toUpperCase().indexOf('FALAS') === -1) total += d.length;
+        }
+      }
+      return total;
+    }
+
     // Line-by-line arc parser
     var lines2 = texto.split(/\r?\n/);
     var arcos = [], cur2 = null, curLines2 = [];
@@ -439,11 +469,11 @@
     lines2.forEach(function(line) {
       var m = line.match(arcRe2);
       if (m) {
-        if (cur2 !== null) arcos.push({ num: cur2, chars: curLines2.join('\n').length });
+        if (cur2 !== null) arcos.push({ num: cur2, lines: curLines2.slice() });
         cur2 = parseInt(m[1]); curLines2 = [];
       } else if (cur2 !== null) { curLines2.push(line); }
     });
-    if (cur2 !== null) arcos.push({ num: cur2, chars: curLines2.join('\n').length });
+    if (cur2 !== null) arcos.push({ num: cur2, lines: curLines2.slice() });
 
     if (arcos.length === 0) {
       erro.innerHTML = '⚠ Nenhum marcador encontrado.<br><span style="color:var(--gray2);font-size:10px">Use: [ARCO 1] ou Arco 1 em linha separada.</span>';
@@ -452,7 +482,10 @@
     }
 
     var newMap = {}, totalChars = 0;
-    arcos.forEach(function(a){ newMap[a.num] = a.chars; totalChars += a.chars; });
+    arcos.forEach(function(a){
+      var c = extractUSChars(a.lines);
+      newMap[a.num] = c; totalChars += c;
+    });
     arcos.sort(function(a,b){ return a.num - b.num; });
     saveArcChars(newMap);
     updateChecklistProgress();
