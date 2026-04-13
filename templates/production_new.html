@@ -4,9 +4,9 @@
 {% block header_title %}<span style="color:var(--red)">NOVA PRODUÇÃO / SHORT</span>{% endblock %}
 
 {% block content %}
-<div style="max-width:600px;margin:0 auto">
+<div style="max-width:640px;margin:0 auto">
 
-  <!-- ── Tab switcher ──────────────────────────────────── -->
+  <!-- ── Tab switcher ──────────────────────────────────────── -->
   <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid var(--border2)">
     <a href="/productions/new?tab=producao"
        style="padding:11px 24px;font-size:11px;letter-spacing:1px;text-decoration:none;
@@ -29,9 +29,8 @@
   </div>
 
 
-  <!-- ══ TAB PRODUÇÃO ════════════════════════════════════ -->
   {% if tab == 'producao' %}
-
+  <!-- ══ TAB PRODUÇÃO ════════════════════════════════════════ -->
   <div class="form-card" style="border-color:var(--red);box-shadow:6px 6px 0 var(--r-dark)">
     <div class="form-header" style="background:var(--red)">
       <span>▶</span>
@@ -39,7 +38,7 @@
       <span style="margin-left:auto;font-size:10px;opacity:.7">* OBRIGATÓRIO</span>
     </div>
     <div class="form-body">
-      <form method="POST" action="/productions/new?tab=producao">
+      <form method="POST" action="/productions/new?tab=producao" id="prod-form">
 
         <div class="field-group">
           <label class="field-label required">◆ TÍTULO DO ROTEIRO</label>
@@ -55,12 +54,43 @@
                  value="{{ request.form.get('producer','') }}" required/>
         </div>
 
+        <!-- Script paste area replaces arc count -->
         <div class="field-group">
-          <label class="field-label required">◆ NÚMERO DE ARCOS</label>
-          <input class="pixel-input" type="number" name="total_arcs"
-                 min="1" max="15" value="{{ request.form.get('total_arcs','11') }}" required/>
+          <label class="field-label">◆ COLE O ROTEIRO AQUI</label>
+          <div style="font-size:9px;color:var(--gray2);margin-bottom:6px">
+            Os arcos são detectados automaticamente pelos marcadores
+            <strong style="color:var(--white)">Arco 1, Arco 2...</strong> ou
+            <strong style="color:var(--white)">[ARCO 1], [ARCO 2]...</strong>
+          </div>
+          <textarea id="script-input" rows="8"
+                    style="width:100%;background:var(--card2);border:1px solid var(--border2);
+                           color:var(--white);font-family:var(--font-pixel);font-size:10px;
+                           padding:10px;resize:vertical;box-sizing:border-box;outline:none;line-height:1.6"
+                    placeholder="Cole o roteiro aqui para detectar os arcos automaticamente...&#10;&#10;Você também pode deixar em branco e definir manualmente."></textarea>
+          <!-- Arc detection result -->
+          <div id="arc-detect-result" style="display:none;margin-top:8px;
+               background:var(--panel);border-left:3px solid var(--green);padding:8px 12px">
+            <span style="font-size:10px;color:var(--green)">✔ DETECTADO: </span>
+            <span id="arc-detect-count" style="font-family:var(--font-vt);font-size:20px;color:var(--green)"></span>
+            <span style="font-size:10px;color:var(--green)"> arcos</span>
+            <span id="arc-detect-chars" style="font-size:9px;color:var(--gray2);margin-left:12px"></span>
+          </div>
+          <div id="arc-detect-none" style="display:none;margin-top:8px;
+               background:var(--panel);border-left:3px solid var(--yellow);padding:8px 12px">
+            <span style="font-size:10px;color:var(--yellow)">⚠ Nenhum arco detectado — defina manualmente abaixo.</span>
+          </div>
+        </div>
+
+        <!-- Manual arc count (shown when script has no arcs OR no script) -->
+        <div class="field-group" id="manual-arcs-group">
+          <label class="field-label">◆ NÚMERO DE ARCOS <span style="color:var(--gray2)">(se não colar roteiro)</span></label>
+          <input class="pixel-input" type="number" id="manual-arcs-input"
+                 min="1" max="15" placeholder="11" style="padding:8px 10px;width:120px"/>
           <span style="font-size:9px;color:var(--gray2);display:block;margin-top:3px">Máximo 15 arcos</span>
         </div>
+
+        <!-- Hidden field that carries the final arc count -->
+        <input type="hidden" name="total_arcs" id="total-arcs-hidden" value="11"/>
 
         <div class="field-group">
           <label class="field-label">◆ OBSERVAÇÕES <span style="color:var(--gray2)">(opcional)</span></label>
@@ -69,7 +99,7 @@
         </div>
 
         <div class="btn-row">
-          <button type="submit" class="action-btn"
+          <button type="submit" class="action-btn" id="prod-submit-btn"
                   style="border-color:var(--red);color:var(--r-soft);position:relative">
             <span style="position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--red)"></span>
             ▶ INICIAR PRODUÇÃO
@@ -87,9 +117,8 @@
   </div>
 
 
-  <!-- ══ TAB SHORT ═══════════════════════════════════════ -->
   {% else %}
-
+  <!-- ══ TAB SHORT ═══════════════════════════════════════════ -->
   <div class="form-card" style="border-color:var(--yellow);box-shadow:6px 6px 0 var(--y-dark)">
     <div class="form-header" style="background:var(--yellow)">
       <span>⚡</span>
@@ -143,8 +172,96 @@
       {% endif %}
     </div>
   </div>
-
   {% endif %}
 
 </div>
+
+<script>
+(function(){
+  var scriptInput  = document.getElementById('script-input');
+  var hiddenArcs   = document.getElementById('total-arcs-hidden');
+  var manualInput  = document.getElementById('manual-arcs-input');
+  var detectResult = document.getElementById('arc-detect-result');
+  var detectNone   = document.getElementById('arc-detect-none');
+  var detectCount  = document.getElementById('arc-detect-count');
+  var detectChars  = document.getElementById('arc-detect-chars');
+  var manualGroup  = document.getElementById('manual-arcs-group');
+
+  if (!scriptInput) return;
+
+  // Also save to sessionStorage for the production detail page to pick up
+  function detectArcs(text) {
+    var pattern = /(?:\r?\n)\s*\[?(?:ARCO|Arco)\s+(\d+)\]?\s*(?:\r?\n)/g;
+    var nums = [];
+    var m;
+    // Try the line-based split
+    var parts = text.split(/\r?\n\s*\[?(?:ARCO|Arco)\s+(\d+)\]?\s*(?:\r?\n)/i);
+    if (parts.length >= 3) {
+      for (var i = 1; i < parts.length; i += 2) {
+        var n = parseInt(parts[i]);
+        if (!isNaN(n)) nums.push(n);
+      }
+    }
+    // Also try [ARCO N] inline
+    if (nums.length === 0) {
+      var parts2 = text.split(/\[ARCO\s+(\d+)\]/i);
+      for (var j = 1; j < parts2.length; j += 2) {
+        var n2 = parseInt(parts2[j]);
+        if (!isNaN(n2)) nums.push(n2);
+      }
+    }
+    return nums.length > 0 ? Math.max.apply(null, nums) : 0;
+  }
+
+  function countTotalChars(text) {
+    // Remove header rows (lines with just "Arco N")
+    var clean = text.replace(/(?:\r?\n)\s*\[?(?:ARCO|Arco)\s+\d+\]?\s*(?=\r?\n)/gi, '\n');
+    return clean.replace(/\s+/g,' ').trim().length;
+  }
+
+  scriptInput.addEventListener('input', function() {
+    var text = scriptInput.value.trim();
+    if (!text) {
+      detectResult.style.display = 'none';
+      detectNone.style.display   = 'none';
+      manualGroup.style.display  = 'block';
+      hiddenArcs.value = manualInput.value || '11';
+      return;
+    }
+    var arcCount = detectArcs(text);
+    if (arcCount > 0) {
+      detectResult.style.display = 'block';
+      detectNone.style.display   = 'none';
+      manualGroup.style.display  = 'none';
+      detectCount.textContent    = arcCount;
+      var total = countTotalChars(text);
+      detectChars.textContent    = '· ' + total.toLocaleString('pt-BR') + ' chars · ~' + (total/1000*5).toFixed(0) + ' min';
+      hiddenArcs.value = arcCount;
+      // Store script in sessionStorage keyed by title (will re-key after save)
+      try { sessionStorage.setItem('pending_script', text); } catch(e) {}
+    } else {
+      detectResult.style.display = 'none';
+      detectNone.style.display   = 'block';
+      manualGroup.style.display  = 'block';
+      hiddenArcs.value = manualInput.value || '11';
+    }
+  });
+
+  manualInput.addEventListener('input', function() {
+    var v = parseInt(manualInput.value);
+    if (v >= 1 && v <= 15) hiddenArcs.value = v;
+  });
+
+  // On submit, ensure hidden field is set
+  var form = document.getElementById('prod-form');
+  if (form) {
+    form.addEventListener('submit', function() {
+      if (!hiddenArcs.value || hiddenArcs.value === '0') {
+        hiddenArcs.value = manualInput.value || '11';
+      }
+    });
+  }
+})();
+</script>
+
 {% endblock %}
