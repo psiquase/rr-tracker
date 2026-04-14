@@ -1,23 +1,30 @@
 {% extends "base.html" %}
 {% block title %}PRODUÇÕES{% endblock %}
 {% block header_icon %}<span style="color:var(--blue)">◈</span>{% endblock %}
-{% block header_title %}<span style="color:var(--blue)">PRODUÇÕES & SHORTS</span>{% endblock %}
+{% block header_title %}<span style="color:var(--blue)">PRODUÇÕES</span>{% endblock %}
 
 {% block content %}
 
+{% set TYPE_CFG = {
+  'producao':  ('▶',  'PRODUÇÃO',   'red',    'var(--red)'),
+  'roteiro':   ('📝', 'ROTEIRO',    'purple', '#bb44ff'),
+  'decupagem': ('✂️', 'DECUPAGEM',  'blue',   'var(--blue)'),
+  'edicao':    ('🎬', 'EDIÇÃO',     'green',  'var(--green)'),
+} %}
+
 {% if is_admin %}
-<!-- Admin summary cards -->
-<div style="margin-bottom:6px"><span class="section-title blue">◆ VISÃO GERAL — PRODUÇÕES</span></div>
+<!-- Admin summary -->
+<div style="margin-bottom:6px"><span class="section-title blue">◆ VISÃO GERAL</span></div>
 <div class="cards-row" style="margin-bottom:24px">
   <div class="stat-card blue">
     <div class="stat-card-title">TOTAL</div>
     <div class="stat-card-value" style="color:var(--blue)">{{ summary.total }}</div>
-    <div class="stat-card-sub">produções cadastradas</div>
+    <div class="stat-card-sub">produções</div>
   </div>
   <div class="stat-card green">
     <div class="stat-card-title">EM ANDAMENTO</div>
     <div class="stat-card-value" style="color:var(--green)">{{ summary.andamento + summary.iniciado }}</div>
-    <div class="stat-card-sub">roteiros ativos</div>
+    <div class="stat-card-sub">ativas</div>
   </div>
   <div class="stat-card yellow">
     <div class="stat-card-title">PAUSADAS</div>
@@ -27,210 +34,177 @@
   <div class="stat-card red">
     <div class="stat-card-title">ATRASADAS</div>
     <div class="stat-card-value" style="color:var(--red)">{{ summary.atrasado }}</div>
-    <div class="stat-card-sub">> 4 dias úteis</div>
+    <div class="stat-card-sub">> 4 d.u.</div>
   </div>
 </div>
 {% endif %}
 
-<!-- ══ PRODUÇÕES ════════════════════════════════════════ -->
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-  <span class="section-title red">◆ PRODUÇÕES</span>
-  <a href="/productions/new" class="action-btn"
-     style="font-size:11px;padding:8px 18px;border-color:var(--red);
-            color:var(--r-soft);position:relative">
-    <span style="position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--red)"></span>
-    ▶ NOVA PRODUÇÃO
-  </a>
-</div>
+<!-- ══ SECTIONS BY TYPE ════════════════════════════════════ -->
+{% for type_id, (icon, label, css_key, col) in TYPE_CFG.items() %}
+{% set type_prods = prods | selectattr('prod_type', 'equalto', type_id) | list %}
 
-{% if prods %}
-<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:32px">
-{% for p in prods %}
+<div style="margin-bottom:32px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <span style="font-size:10px;letter-spacing:1px;color:{{ col }};
+                 border-left:4px solid {{ col }};padding-left:10px;font-weight:bold">
+      {{ icon }} {{ label }}
+      <span style="font-size:9px;color:var(--gray2);margin-left:8px">({{ type_prods|length }})</span>
+    </span>
+    <a href="/productions/new?tab={{ type_id }}" class="action-btn"
+       style="font-size:10px;padding:6px 14px;border-color:{{ col }};
+              color:{{ col }};position:relative">
+      <span style="position:absolute;left:0;top:0;bottom:0;width:4px;background:{{ col }}"></span>
+      + NOVA
+    </a>
+  </div>
+
+  {% if type_prods %}
+  <div style="display:flex;flex-direction:column;gap:8px">
+  {% for p in type_prods %}
   {% set sc = p.dl_color %}
   {% set status_label = {'iniciado':'INICIADO','em_andamento':'EM ANDAMENTO','pausado':'PAUSADO','concluido':'CONCLUÍDO'}[p.status] %}
   {% set status_color = {'iniciado':'var(--blue)','em_andamento':'var(--green)','pausado':'var(--yellow)','concluido':'var(--gray2)'}[p.status] %}
 
-  <div style="background:var(--card);border:2px solid var(--{{ sc }});box-shadow:4px 4px 0 rgba(0,0,0,.4)">
-    <div style="background:var(--card2);padding:10px 16px;display:flex;align-items:center;
+  <div style="background:var(--card);border:2px solid {{ col }};border-left:6px solid {{ col }};
+              box-shadow:3px 3px 0 rgba(0,0,0,.4)">
+    <div style="background:var(--card2);padding:9px 14px;display:flex;align-items:center;
                 justify-content:space-between;border-bottom:1px solid var(--border2);flex-wrap:wrap;gap:8px">
-      <div style="display:flex;align-items:center;gap:14px">
-        <span style="color:var(--{{ sc }});font-size:18px;font-family:var(--font-vt)">▶</span>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="color:{{ col }};font-size:16px">{{ icon }}</span>
         <div>
-          <div style="font-size:13px;font-weight:bold;color:var(--white)">{{ p.title }}</div>
-          <div style="font-size:10px;color:var(--gray2)">{{ p.producer }}</div>
+          <div style="font-size:12px;font-weight:bold;color:var(--white)">{{ p.title }}</div>
+          <div style="font-size:9px;color:var(--gray2)">{{ p.producer }}</div>
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-        <span style="font-size:10px;color:{{ status_color }};border:1px solid {{ status_color }};padding:3px 10px">{{ status_label }}</span>
-        <a href="/productions/{{ p.id }}" class="action-btn blue-btn" style="font-size:10px;padding:5px 14px">VER ▶</a>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span style="font-size:9px;color:{{ status_color }};border:1px solid {{ status_color }};padding:2px 8px">{{ status_label }}</span>
+        {% if type_id == 'producao' %}
+        <span style="font-size:9px;color:var(--gray2)">{{ p.arcs_done_count }}/{{ p.total_arcs }} arcos</span>
+        {% endif %}
+        <span style="font-size:9px;color:{{ col }}">{{ p.duration_bdays }} d.u.</span>
+        <a href="/productions/{{ p.id }}" class="action-btn"
+           style="font-size:9px;padding:4px 12px;border-color:{{ col }};color:{{ col }}">VER ▶</a>
       </div>
     </div>
-    <div style="padding:12px 16px;display:flex;gap:24px;flex-wrap:wrap;align-items:center">
-      <div style="flex:1;min-width:160px">
-        <div style="font-size:9px;color:var(--gray2);margin-bottom:5px;letter-spacing:1px">◆ ARCOS GRAVADOS</div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <div style="flex:1;background:var(--card2);height:8px;border:1px solid var(--border2)">
-            <div style="height:100%;background:var(--{{ sc }});width:{{ p.arc_pct }}%"></div>
-          </div>
-          <span style="font-size:11px;color:var(--{{ sc }});white-space:nowrap">{{ p.arcs_done_count }}/{{ p.total_arcs }}</span>
+
+    <!-- Progress bar (arcos for producao, time for others) -->
+    <div style="padding:10px 14px">
+      {% if type_id == 'producao' %}
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="flex:1;background:var(--card2);height:6px;border:1px solid var(--border2)">
+          <div style="height:100%;background:{{ col }};width:{{ p.arc_pct }}%"></div>
         </div>
+        <span style="font-size:9px;color:{{ col }}">{{ p.arc_pct }}%</span>
       </div>
-      <div style="min-width:120px">
-        <div style="font-size:9px;color:var(--gray2);margin-bottom:5px;letter-spacing:1px">◆ {% if p.status=='concluido' %}DURAÇÃO{% else %}EM CURSO{% endif %}</div>
-        <div style="display:flex;align-items:baseline;gap:4px">
-          <span style="font-family:var(--font-vt);font-size:24px;color:var(--{{ sc }});line-height:1">{{ p.duration_bdays }}</span>
-          <span style="font-size:9px;color:var(--gray2)">dias úteis</span>
-        </div>
-      </div>
-      {% if is_admin %}
-      <div style="text-align:center;min-width:90px">
-        <div style="font-size:9px;color:var(--gray2);margin-bottom:2px;letter-spacing:1px">◆ PRAZO</div>
-        {% if p.status=='concluido' %}
-          <span style="color:var(--green);font-size:11px">✔ OK</span>
-        {% elif p.bdays<=4 %}
-          <span style="color:var(--{{ sc }});font-size:11px">{{ 4-p.bdays }}d restantes</span>
-        {% else %}
-          <span style="color:var(--red);font-size:11px">⚠ ATRASADO</span>
+      {% else %}
+      <div style="display:flex;gap:16px;font-size:9px;color:var(--gray2)">
+        <span>INÍCIO: <strong style="color:var(--white)">{{ p.started_at[:10] }}</strong></span>
+        {% if p.status=='concluido' and p.completed_at %}
+        <span>FIM: <strong style="color:var(--green)">{{ p.completed_at[:10] }}</strong></span>
+        {% endif %}
+        {% if p.script_chars > 0 %}
+        <span>CHARS: <strong style="color:{{ col }}">{{ "{:,}".format(p.script_chars).replace(",",".") }}</strong></span>
         {% endif %}
       </div>
       {% endif %}
     </div>
   </div>
+  {% endfor %}
+  </div>
+  {% else %}
+  <div style="background:var(--card);border:1px dashed {{ col }}44;padding:16px;
+              text-align:center;font-size:10px;color:var(--gray2)">
+    Nenhuma {{ label|lower }} registrada.
+    <a href="/productions/new?tab={{ type_id }}"
+       style="color:{{ col }};text-decoration:none;margin-left:8px">+ Criar</a>
+  </div>
+  {% endif %}
+</div>
 {% endfor %}
-</div>
-{% else %}
-<div class="empty-state" style="margin-bottom:32px">
-  ⚠ &nbsp; Nenhuma produção cadastrada ainda.
-</div>
-{% endif %}
 
 
-<!-- ══ SHORTS ══════════════════════════════════════════ -->
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-  <span class="section-title yellow">⚡ SHORTS</span>
-  <a href="/shorts/new" class="action-btn"
-     style="font-size:11px;padding:8px 18px;border-color:var(--yellow);
-            color:var(--y-soft);position:relative">
-    <span style="position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--yellow)"></span>
-    ⚡ NOVO SHORT
-  </a>
-</div>
-
-{% if shorts %}
-<div style="background:var(--card);border:2px solid var(--yellow);box-shadow:4px 4px 0 var(--y-dark)">
-
-  <!-- Table header -->
-  <div style="background:var(--y-dark);padding:8px 16px;
-              display:grid;grid-template-columns:2fr 1.4fr 1fr 1fr 1fr 1fr auto;
-              gap:10px;font-size:9px;color:var(--yellow);letter-spacing:1px">
-    <span>TÍTULO</span>
-    <span>PRODUTOR</span>
-    <span>STATUS</span>
-    <span>INÍCIO</span>
-    <span>FIM</span>
-    <span>DURAÇÃO</span>
-    <span></span>
+<!-- ══ SHORTS ══════════════════════════════════════════════ -->
+<div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <span style="font-size:10px;letter-spacing:1px;color:var(--yellow);
+                 border-left:4px solid var(--yellow);padding-left:10px;font-weight:bold">
+      ⚡ SHORTS
+      <span style="font-size:9px;color:var(--gray2);margin-left:8px">({{ shorts|length }})</span>
+    </span>
+    <a href="/productions/new?tab=short" class="action-btn"
+       style="font-size:10px;padding:6px 14px;border-color:var(--yellow);
+              color:var(--yellow);position:relative">
+      <span style="position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--yellow)"></span>
+      + NOVO
+    </a>
   </div>
 
-  {% set sl_map = {'iniciado':'INICIADO','em_andamento':'EM ANDAMENTO','pausado':'PAUSADO','concluido':'CONCLUÍDO'} %}
-  {% set sc_map = {'iniciado':'var(--blue)','em_andamento':'var(--green)','pausado':'var(--yellow)','concluido':'var(--gray2)'} %}
-
-  {% for s in shorts %}
-  <div style="padding:11px 16px;
-              display:grid;grid-template-columns:2fr 1.4fr 1fr 1fr 1fr 1fr auto;
-              gap:10px;align-items:center;
-              border-top:1px solid var(--border);
-              {% if s.status=='concluido' %}background:rgba(255,215,0,.03){% endif %}">
-
-    <span style="font-size:12px;color:var(--white);font-weight:bold">{{ s.title }}</span>
-    <span style="font-size:11px;color:var(--gray2)">{{ s.producer }}</span>
-
-    <span style="font-size:9px;color:{{ sc_map[s.status] }};
-                 border:1px solid {{ sc_map[s.status] }};
-                 padding:2px 8px;white-space:nowrap">
-      {{ sl_map[s.status] }}
-    </span>
-
-    <span style="font-size:10px;color:var(--gray2)">{{ s.started_at[11:16] }}<br><span style="font-size:9px">{{ s.started_at[:10] }}</span></span>
-
-    <span style="font-size:10px;color:{% if s.completed_at %}var(--green){% else %}var(--gray){% endif %}">
-      {% if s.completed_at %}{{ s.completed_at[11:16] }}<br><span style="font-size:9px">{{ s.completed_at[:10] }}</span>
-      {% else %}—{% endif %}
-    </span>
-
-    <div>
-      <span style="font-family:var(--font-vt);font-size:20px;
-                   color:{% if s.status=='concluido' %}var(--green){% else %}var(--yellow){% endif %}">
-        {{ s.duration_minutes }}
-      </span>
-      <span style="font-size:9px;color:var(--gray2)"> min{% if s.status!='concluido' %} ⏳{% endif %}</span>
+  {% if shorts %}
+  <div style="background:var(--card);border:2px solid var(--yellow);border-left:6px solid var(--yellow)">
+    <div style="background:var(--y-dark);padding:8px 14px;display:grid;
+                grid-template-columns:2fr 1.4fr 1fr 1fr 1fr auto;
+                gap:10px;font-size:9px;color:var(--yellow);letter-spacing:1px">
+      <span>TÍTULO</span><span>PRODUTOR</span><span>STATUS</span>
+      <span>INÍCIO</span><span>FIM</span><span>DUR.</span>
     </div>
-
-    <!-- Actions -->
-    <div style="display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap">
-      {% if s.status not in ('em_andamento','iniciado') %}
+    {% set sl_map = {'iniciado':'INICIADO','em_andamento':'EM ANDAMENTO','pausado':'PAUSADO','concluido':'CONCLUÍDO'} %}
+    {% set sc_map = {'iniciado':'var(--blue)','em_andamento':'var(--green)','pausado':'var(--yellow)','concluido':'var(--gray2)'} %}
+    {% for s in shorts %}
+    <div style="padding:10px 14px;display:grid;grid-template-columns:2fr 1.4fr 1fr 1fr 1fr auto;
+                gap:10px;align-items:center;border-top:1px solid var(--border);
+                {% if s.status=='concluido' %}background:rgba(255,215,0,.03){% endif %}">
+      <span style="font-size:11px;color:var(--white);font-weight:bold">{{ s.title }}</span>
+      <span style="font-size:10px;color:var(--gray2)">{{ s.producer }}</span>
+      <span style="font-size:9px;color:{{ sc_map[s.status] }};border:1px solid {{ sc_map[s.status] }};padding:2px 6px;white-space:nowrap">{{ sl_map[s.status] }}</span>
+      <span style="font-size:9px;color:var(--gray2)">{{ s.started_at[11:16] }}<br>{{ s.started_at[:10] }}</span>
+      <span style="font-size:9px;color:{% if s.completed_at %}var(--green){% else %}var(--gray){% endif %}">
+        {% if s.completed_at %}{{ s.completed_at[11:16] }}<br>{{ s.completed_at[:10] }}{% else %}—{% endif %}
+      </span>
+      <div style="display:flex;align-items:baseline;gap:3px">
+        <span style="font-family:var(--font-vt);font-size:18px;color:{% if s.status=='concluido' %}var(--green){% else %}var(--yellow){% endif %}">{{ s.duration_minutes }}</span>
+        <span style="font-size:8px;color:var(--gray2)">min</span>
+      </div>
+      <!-- Actions -->
+      <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">
+        {% if s.status not in ('em_andamento','iniciado') %}
         <form method="POST" action="/shorts/{{ s.id }}/status" style="margin:0">
           <input type="hidden" name="status" value="em_andamento"/>
-          <button type="submit"
-                  style="background:none;border:1px solid var(--green);color:var(--green);
-                         padding:4px 8px;cursor:pointer;font-family:var(--font-pixel);font-size:9px">
-            ▶
-          </button>
-        </form>
-      {% endif %}
-      {% if s.status not in ('pausado','concluido') %}
+          <button type="submit" style="background:none;border:1px solid var(--green);color:var(--green);padding:3px 7px;cursor:pointer;font-family:var(--font-pixel);font-size:8px">▶</button>
+        </form>{% endif %}
+        {% if s.status not in ('pausado','concluido') %}
         <form method="POST" action="/shorts/{{ s.id }}/status" style="margin:0">
           <input type="hidden" name="status" value="pausado"/>
-          <button type="submit"
-                  style="background:none;border:1px solid var(--yellow);color:var(--yellow);
-                         padding:4px 8px;cursor:pointer;font-family:var(--font-pixel);font-size:9px">
-            ⏸
-          </button>
-        </form>
-      {% endif %}
-      {% if s.status != 'concluido' %}
+          <button type="submit" style="background:none;border:1px solid var(--yellow);color:var(--yellow);padding:3px 7px;cursor:pointer;font-family:var(--font-pixel);font-size:8px">⏸</button>
+        </form>{% endif %}
+        {% if s.status != 'concluido' %}
         <form method="POST" action="/shorts/{{ s.id }}/status" style="margin:0">
           <input type="hidden" name="status" value="concluido"/>
-          <button type="submit"
-                  style="background:none;border:1px solid var(--gray);color:var(--gray2);
-                         padding:4px 8px;cursor:pointer;font-family:var(--font-pixel);font-size:9px">
-            ✔ FIM
-          </button>
-        </form>
-      {% endif %}
-      {% if is_admin %}
-        <form method="POST" action="/shorts/{{ s.id }}/delete" style="margin:0"
-              onsubmit="return confirm('Deletar este short?')">
-          <button type="submit"
-                  style="background:none;border:1px solid var(--r-dark);color:var(--r-dark);
-                         padding:4px 8px;cursor:pointer;font-family:var(--font-pixel);font-size:9px">
-            ✕
-          </button>
-        </form>
-      {% endif %}
+          <button type="submit" style="background:none;border:1px solid var(--gray);color:var(--gray2);padding:3px 7px;cursor:pointer;font-family:var(--font-pixel);font-size:8px">✔</button>
+        </form>{% endif %}
+        {% if is_admin %}
+        <form method="POST" action="/shorts/{{ s.id }}/delete" style="margin:0" onsubmit="return confirm('Deletar?')">
+          <button type="submit" style="background:none;border:1px solid var(--r-dark);color:var(--r-dark);padding:3px 7px;cursor:pointer;font-family:var(--font-pixel);font-size:8px">✕</button>
+        </form>{% endif %}
+      </div>
     </div>
-
+    {% endfor %}
+    {% set conc = shorts | selectattr('status','equalto','concluido') | list %}
+    {% if conc %}
+    {% set avg_m = (conc | sum(attribute='duration_minutes')) // conc|length %}
+    <div style="background:var(--y-dark);padding:8px 14px;display:flex;gap:20px;font-size:9px;border-top:1px solid var(--yellow)">
+      <span style="color:var(--gray2)">TOTAL: <strong style="color:var(--yellow)">{{ shorts|length }}</strong></span>
+      <span style="color:var(--gray2)">CONCLUÍDOS: <strong style="color:var(--green)">{{ conc|length }}</strong></span>
+      <span style="color:var(--gray2)">TEMPO MÉDIO: <strong style="color:var(--yellow)">{{ avg_m }} min</strong></span>
+    </div>
+    {% endif %}
   </div>
-  {% endfor %}
-
+  {% else %}
+  <div style="background:var(--card);border:1px dashed var(--y-dark);padding:16px;
+              text-align:center;font-size:10px;color:var(--gray2)">
+    Nenhum short registrado.
+    <a href="/productions/new?tab=short" style="color:var(--yellow);text-decoration:none;margin-left:8px">+ Criar</a>
+  </div>
+  {% endif %}
 </div>
-
-<!-- Shorts summary bar -->
-{% set concluidos = shorts | selectattr('status','equalto','concluido') | list %}
-{% if concluidos %}
-{% set avg_mins = (concluidos | sum(attribute='duration_minutes')) // concluidos|length %}
-<div style="background:var(--panel);border:1px solid var(--y-dark);border-top:3px solid var(--yellow);
-            padding:10px 16px;display:flex;gap:28px;align-items:center;font-size:10px">
-  <span style="color:var(--gray2)">◆ TOTAL: <span style="color:var(--yellow);font-family:var(--font-vt);font-size:18px">{{ shorts|length }}</span></span>
-  <span style="color:var(--gray2)">◆ CONCLUÍDOS: <span style="color:var(--green);font-family:var(--font-vt);font-size:18px">{{ concluidos|length }}</span></span>
-  <span style="color:var(--gray2)">◆ TEMPO MÉDIO: <span style="color:var(--yellow);font-family:var(--font-vt);font-size:18px">{{ avg_mins }}</span> min</span>
-</div>
-{% endif %}
-
-{% else %}
-<div class="empty-state" style="border-color:var(--y-dark)">
-  ⚡ &nbsp; Nenhum short registrado ainda.
-</div>
-{% endif %}
 
 {% endblock %}
