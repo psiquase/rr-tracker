@@ -17,18 +17,11 @@ app = Flask(__name__)
 
 # ── Cache busting: compute CSS version once at startup ────
 import hashlib as _hashlib
-_css_v = '1'
+_css_path = os.path.join(os.path.dirname(__file__), 'static', 'css', 'style.css')
 try:
-    _css_candidates = [
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'css', 'style.css'),
-        os.path.join('/app', 'static', 'css', 'style.css'),
-    ]
-    for _p in _css_candidates:
-        if os.path.exists(_p):
-            _css_v = _hashlib.md5(open(_p,'rb').read()).hexdigest()[:8]
-            break
+    _css_v = _hashlib.md5(open(_css_path,'rb').read()).hexdigest()[:8]
 except Exception:
-    pass
+    _css_v = '1'
 
 @app.context_processor
 def inject_css_version():
