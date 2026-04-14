@@ -1,60 +1,55 @@
 {% extends "base.html" %}
-{% block title %}PRODUÇÕES{% endblock %}
-{% block header_icon %}<span style="color:var(--blue)">◈</span>{% endblock %}
-{% block header_title %}<span style="color:var(--blue)">PRODUÇÕES</span>{% endblock %}
+{% block title %}Produções{% endblock %}
+{% block header_icon %}⊞{% endblock %}
+{% block header_title %}Produções{% endblock %}
 
 {% block content %}
 
-{% set TYPE_CFG = {
-  'producao':  ('▶',  'PRODUÇÃO',   'red',    'var(--red)'),
-  'roteiro':   ('📝', 'ROTEIRO',    'purple', '#bb44ff'),
-  'decupagem': ('✂️', 'DECUPAGEM',  'blue',   'var(--blue)'),
-  'edicao':    ('🎬', 'EDIÇÃO',     'green',  'var(--green)'),
-} %}
+{% set TYPE_CFG = [
+  ('producao',  '▶',  'Produção',   'var(--red)',   'rgba(255,69,58,0.12)',  'rgba(255,69,58,0.25)'),
+  ('roteiro',   '📝', 'Roteiro',    '#bf5af2',      'rgba(191,90,242,0.10)', 'rgba(191,90,242,0.25)'),
+  ('decupagem', '✂️', 'Decupagem',  'var(--cyan)',  'rgba(90,200,250,0.10)', 'rgba(90,200,250,0.25)'),
+  ('edicao',    '🎬', 'Edição',     'var(--green)', 'rgba(48,209,88,0.10)',  'rgba(48,209,88,0.25)'),
+] %}
 
 {% if is_admin %}
-<!-- Admin summary -->
-<div style="margin-bottom:6px"><span class="section-title blue">◆ VISÃO GERAL</span></div>
-<div class="cards-row" style="margin-bottom:24px">
-  <div class="stat-card blue">
-    <div class="stat-card-title">TOTAL</div>
-    <div class="stat-card-value" style="color:var(--blue)">{{ summary.total }}</div>
-    <div class="stat-card-sub">produções</div>
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px">
+  {% set active_count = prods | rejectattr('status','equalto','concluido') | list | length %}
+  {% set done_count   = prods | selectattr('status','equalto','concluido') | list | length %}
+  <div style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:14px;padding:14px 18px;flex:1;min-width:120px">
+    <div style="font-size:10px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Total</div>
+    <div style="font-size:32px;font-weight:300;color:var(--text-primary);letter-spacing:-1px">{{ prods|length }}</div>
   </div>
-  <div class="stat-card green">
-    <div class="stat-card-title">EM ANDAMENTO</div>
-    <div class="stat-card-value" style="color:var(--green)">{{ summary.andamento + summary.iniciado }}</div>
-    <div class="stat-card-sub">ativas</div>
+  <div style="background:rgba(48,209,88,0.08);border:1px solid rgba(48,209,88,0.20);border-radius:14px;padding:14px 18px;flex:1;min-width:120px">
+    <div style="font-size:10px;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Ativas</div>
+    <div style="font-size:32px;font-weight:300;color:var(--green);letter-spacing:-1px">{{ active_count }}</div>
   </div>
-  <div class="stat-card yellow">
-    <div class="stat-card-title">PAUSADAS</div>
-    <div class="stat-card-value" style="color:var(--yellow)">{{ summary.pausado }}</div>
-    <div class="stat-card-sub">aguardando</div>
-  </div>
-  <div class="stat-card red">
-    <div class="stat-card-title">ATRASADAS</div>
-    <div class="stat-card-value" style="color:var(--red)">{{ summary.atrasado }}</div>
-    <div class="stat-card-sub">> 4 d.u.</div>
+  <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:14px;padding:14px 18px;flex:1;min-width:120px">
+    <div style="font-size:10px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Concluídas</div>
+    <div style="font-size:32px;font-weight:300;color:var(--text-secondary);letter-spacing:-1px">{{ done_count }}</div>
   </div>
 </div>
 {% endif %}
 
-<!-- ══ SECTIONS BY TYPE ════════════════════════════════════ -->
-{% for type_id, (icon, label, css_key, col) in TYPE_CFG.items() %}
+<!-- ══ SECTIONS ════════════════════════════════════════════ -->
+{% for type_id, icon, label, col, col_bg, col_border in TYPE_CFG %}
 {% set type_prods = prods | selectattr('prod_type', 'equalto', type_id) | list %}
 
-<div style="margin-bottom:32px">
+<div style="margin-bottom:28px">
+
+  <!-- Section header -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-    <span style="font-size:10px;letter-spacing:1px;color:{{ col }};
-                 border-left:4px solid {{ col }};padding-left:10px;font-weight:bold">
-      {{ icon }} {{ label }}
-      <span style="font-size:9px;color:var(--gray2);margin-left:8px">({{ type_prods|length }})</span>
-    </span>
-    <a href="/productions/new?tab={{ type_id }}" class="action-btn"
-       style="font-size:10px;padding:6px 14px;border-color:{{ col }};
-              color:{{ col }};position:relative">
-      <span style="position:absolute;left:0;top:0;bottom:0;width:4px;background:{{ col }}"></span>
-      + NOVA
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:3px;height:18px;background:{{ col }};border-radius:2px"></div>
+      <span style="font-size:13px;font-weight:600;color:{{ col }}">{{ icon }} {{ label }}</span>
+      <span style="font-size:11px;color:var(--text-tertiary);background:rgba(255,255,255,0.05);border-radius:20px;padding:2px 10px">{{ type_prods|length }}</span>
+    </div>
+    <a href="/productions/new?tab={{ type_id }}"
+       style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;
+              background:{{ col_bg }};border:1px solid {{ col_border }};
+              border-radius:20px;text-decoration:none;font-size:12px;font-weight:500;color:{{ col }};
+              transition:background 0.15s">
+      + Nova
     </a>
   </div>
 
@@ -62,48 +57,89 @@
   <div style="display:flex;flex-direction:column;gap:8px">
   {% for p in type_prods %}
   {% set sc = p.dl_color %}
-  {% set status_label = {'iniciado':'INICIADO','em_andamento':'EM ANDAMENTO','pausado':'PAUSADO','concluido':'CONCLUÍDO'}[p.status] %}
-  {% set status_color = {'iniciado':'var(--blue)','em_andamento':'var(--green)','pausado':'var(--yellow)','concluido':'var(--gray2)'}[p.status] %}
+  {% set sc_var = 'var(--green)' if sc=='green' else 'var(--yellow)' if sc=='yellow' else 'var(--red)' %}
+  {% set sl = {'iniciado':'Iniciado','em_andamento':'Em Andamento','pausado':'Pausado','concluido':'Concluído'}[p.status] %}
+  {% set sc2 = {'iniciado':'var(--blue)','em_andamento':'var(--green)','pausado':'var(--yellow)','concluido':'var(--gray2)'}[p.status] %}
+  {% set all_prods = [p.producer] %}
 
-  <div style="background:var(--card);border:2px solid {{ col }};border-left:6px solid {{ col }};
-              ">
-    <div style="background:var(--card2);padding:9px 14px;display:flex;align-items:center;
-                justify-content:space-between;border-bottom:1px solid var(--border2);flex-wrap:wrap;gap:8px">
-      <div style="display:flex;align-items:center;gap:12px">
-        <span style="color:{{ col }};font-size:16px">{{ icon }}</span>
-        <div>
-          <div style="font-size:12px;font-weight:bold;color:var(--white)">{{ p.title }}</div>
-          <div style="font-size:9px;color:var(--gray2)">{{ p.producer }}</div>
+  <div style="background:rgba(255,255,255,0.04);border:1px solid {{ col_border }};
+              border-radius:16px;overflow:hidden;transition:background 0.12s"
+       onmouseover="this.style.background='rgba(255,255,255,0.06)'"
+       onmouseout="this.style.background='rgba(255,255,255,0.04)'">
+
+    <!-- Card header -->
+    <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
+        <span style="color:{{ col }};font-size:18px;flex-shrink:0">{{ icon }}</span>
+        <div style="min-width:0">
+          <div style="font-size:14px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+            {{ p.title }}
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap">
+            <span style="font-size:11px;color:var(--text-secondary)">{{ p.producer }}</span>
+            {% if p.co_producers %}
+              {% for cp in p.co_producers.split(',') %}{% if cp.strip() %}
+              <span style="font-size:10px;color:{{ col }};background:{{ col_bg }};border-radius:10px;padding:1px 8px">{{ cp.strip() }}</span>
+              {% endif %}{% endfor %}
+            {% endif %}
+          </div>
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <span style="font-size:9px;color:{{ status_color }};border:1px solid {{ status_color }};padding:2px 8px">{{ status_label }}</span>
+
+      <!-- Right actions -->
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0">
+        <span style="font-size:11px;color:{{ sc2 }};background:{{ sc2 }}22;border-radius:20px;padding:3px 10px;font-weight:500">{{ sl }}</span>
         {% if type_id == 'producao' %}
-        <span style="font-size:9px;color:var(--gray2)">{{ p.arcs_done_count }}/{{ p.total_arcs }} arcos</span>
+        <span style="font-size:11px;color:var(--text-tertiary)">{{ p.arcs_done_count }}/{{ p.total_arcs }}</span>
         {% endif %}
-        <span style="font-size:9px;color:{{ col }}">{{ p.duration_bdays }} d.u.</span>
-        <a href="/productions/{{ p.id }}" class="action-btn"
-           style="font-size:9px;padding:4px 12px;border-color:{{ col }};color:{{ col }}">VER ▶</a>
+        <span style="font-size:11px;color:{{ col }};font-weight:500">
+          {% if type_id == 'producao' %}{{ p.duration_bdays }} d.u.{% else %}{{ p.duration_label }}{% endif %}
+        </span>
+        <a href="/productions/{{ p.id }}"
+           style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;
+                  background:{{ col_bg }};border:1px solid {{ col_border }};border-radius:20px;
+                  text-decoration:none;font-size:12px;font-weight:500;color:{{ col }}">
+          Ver ▶
+        </a>
+        <!-- Edit button -->
+        <button onclick="openEdit({{ p.id }}, '{{ p.title|replace("'","\\'") }}', '{{ p.producer|replace("'","\\'") }}', '{{ (p.co_producers or '')|replace("'","\\'") }}')"
+                style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);
+                       border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--text-secondary);
+                       font-size:13px;line-height:1;transition:background 0.12s"
+                title="Editar" onmouseover="this.style.background='rgba(255,255,255,0.10)'"
+                onmouseout="this.style.background='rgba(255,255,255,0.06)'">✏️</button>
+        <!-- Delete button -->
+        {% if is_admin %}
+        <form method="POST" action="/productions/{{ p.id }}/delete" style="margin:0"
+              onsubmit="return confirm('Deletar {{ p.title }}?')">
+          <button type="submit"
+                  style="background:rgba(255,69,58,0.08);border:1px solid rgba(255,69,58,0.20);
+                         border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--red);
+                         font-size:13px;line-height:1;transition:background 0.12s"
+                  title="Deletar" onmouseover="this.style.background='rgba(255,69,58,0.16)'"
+                  onmouseout="this.style.background='rgba(255,69,58,0.08)'">🗑</button>
+        </form>
+        {% endif %}
       </div>
     </div>
 
-    <!-- Progress bar (arcos for producao, time for others) -->
-    <div style="padding:10px 14px">
+    <!-- Progress bar -->
+    <div style="padding:0 16px 14px">
       {% if type_id == 'producao' %}
       <div style="display:flex;align-items:center;gap:8px">
-        <div style="flex:1;background:var(--card2);height:6px;border:1px solid var(--border2)">
-          <div style="height:100%;background:{{ col }};width:{{ p.arc_pct }}%"></div>
+        <div style="flex:1;background:rgba(255,255,255,0.07);height:5px;border-radius:3px;overflow:hidden">
+          <div style="height:100%;background:{{ col }};width:{{ p.arc_pct }}%;border-radius:3px;transition:width .4s"></div>
         </div>
-        <span style="font-size:9px;color:{{ col }}">{{ p.arc_pct }}%</span>
+        <span style="font-size:11px;font-weight:500;color:{{ col }};min-width:30px;text-align:right">{{ p.arc_pct }}%</span>
       </div>
       {% else %}
-      <div style="display:flex;gap:16px;font-size:9px;color:var(--gray2)">
-        <span>INÍCIO: <strong style="color:var(--white)">{{ p.started_at[:10] }}</strong></span>
+      <div style="display:flex;gap:14px;font-size:11px;color:var(--text-tertiary)">
+        <span>Início: <strong style="color:var(--text-secondary)">{{ p.started_at[:10] }}</strong></span>
         {% if p.status=='concluido' and p.completed_at %}
-        <span>FIM: <strong style="color:var(--green)">{{ p.completed_at[:10] }}</strong></span>
+        <span>Fim: <strong style="color:var(--green)">{{ p.completed_at[:10] }}</strong></span>
         {% endif %}
         {% if p.script_chars > 0 %}
-        <span>CHARS: <strong style="color:{{ col }}">{{ "{:,}".format(p.script_chars).replace(",",".") }}</strong></span>
+        <span>{{ "{:,}".format(p.script_chars).replace(",",".") }} ch</span>
         {% endif %}
       </div>
       {% endif %}
@@ -111,12 +147,12 @@
   </div>
   {% endfor %}
   </div>
+
   {% else %}
-  <div style="background:var(--card);border:1px dashed {{ col }}44;padding:16px;
-              text-align:center;font-size:10px;color:var(--gray2)">
+  <div style="background:rgba(255,255,255,0.03);border:1px dashed {{ col_border }};
+              border-radius:14px;padding:20px;text-align:center;font-size:13px;color:var(--text-tertiary)">
     Nenhuma {{ label|lower }} registrada.
-    <a href="/productions/new?tab={{ type_id }}"
-       style="color:{{ col }};text-decoration:none;margin-left:8px">+ Criar</a>
+    <a href="/productions/new?tab={{ type_id }}" style="color:{{ col }};text-decoration:none;margin-left:8px">+ Criar</a>
   </div>
   {% endif %}
 </div>
@@ -126,85 +162,139 @@
 <!-- ══ SHORTS ══════════════════════════════════════════════ -->
 <div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-    <span style="font-size:10px;letter-spacing:1px;color:var(--yellow);
-                 border-left:4px solid var(--yellow);padding-left:10px;font-weight:bold">
-      ⚡ SHORTS
-      <span style="font-size:9px;color:var(--gray2);margin-left:8px">({{ shorts|length }})</span>
-    </span>
-    <a href="/productions/new?tab=short" class="action-btn"
-       style="font-size:10px;padding:6px 14px;border-color:var(--yellow);
-              color:var(--yellow);position:relative">
-      <span style="position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--yellow)"></span>
-      + NOVO
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:3px;height:18px;background:var(--yellow);border-radius:2px"></div>
+      <span style="font-size:13px;font-weight:600;color:var(--yellow)">⚡ Shorts</span>
+      <span style="font-size:11px;color:var(--text-tertiary);background:rgba(255,255,255,0.05);border-radius:20px;padding:2px 10px">{{ shorts|length }}</span>
+    </div>
+    <a href="/productions/new?tab=short"
+       style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;
+              background:rgba(255,214,10,0.10);border:1px solid rgba(255,214,10,0.25);
+              border-radius:20px;text-decoration:none;font-size:12px;font-weight:500;color:var(--yellow)">
+      + Novo
     </a>
   </div>
 
   {% if shorts %}
-  <div style="background:var(--card);border:2px solid var(--yellow);border-left:6px solid var(--yellow)">
-    <div style="background:var(--y-dark);padding:8px 14px;display:grid;
-                grid-template-columns:2fr 1.4fr 1fr 1fr 1fr auto;
-                gap:10px;font-size:9px;color:var(--yellow);letter-spacing:1px">
-      <span>TÍTULO</span><span>PRODUTOR</span><span>STATUS</span>
-      <span>INÍCIO</span><span>FIM</span><span>DUR.</span>
-    </div>
-    {% set sl_map = {'iniciado':'INICIADO','em_andamento':'EM ANDAMENTO','pausado':'PAUSADO','concluido':'CONCLUÍDO'} %}
-    {% set sc_map = {'iniciado':'var(--blue)','em_andamento':'var(--green)','pausado':'var(--yellow)','concluido':'var(--gray2)'} %}
+  <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,214,10,0.20);border-radius:16px;overflow:hidden">
+    {% set sl = {'iniciado':'Iniciado','em_andamento':'Em Andamento','pausado':'Pausado','concluido':'Concluído'} %}
+    {% set sc = {'iniciado':'var(--blue)','em_andamento':'var(--green)','pausado':'var(--yellow)','concluido':'var(--gray2)'} %}
     {% for s in shorts %}
-    <div style="padding:10px 14px;display:grid;grid-template-columns:2fr 1.4fr 1fr 1fr 1fr auto;
-                gap:10px;align-items:center;border-top:1px solid var(--border);
-                {% if s.status=='concluido' %}background:rgba(255,215,0,.03){% endif %}">
-      <span style="font-size:11px;color:var(--white);font-weight:bold">{{ s.title }}</span>
-      <span style="font-size:10px;color:var(--gray2)">{{ s.producer }}</span>
-      <span style="font-size:9px;color:{{ sc_map[s.status] }};border:1px solid {{ sc_map[s.status] }};padding:2px 6px;white-space:nowrap">{{ sl_map[s.status] }}</span>
-      <span style="font-size:9px;color:var(--gray2)">{{ s.started_at[11:16] }}<br>{{ s.started_at[:10] }}</span>
-      <span style="font-size:9px;color:{% if s.completed_at %}var(--green){% else %}var(--gray){% endif %}">
-        {% if s.completed_at %}{{ s.completed_at[11:16] }}<br>{{ s.completed_at[:10] }}{% else %}—{% endif %}
-      </span>
-      <div style="display:flex;align-items:baseline;gap:3px">
-        <span style="font-family:var(--font-vt);font-size:18px;color:{% if s.status=='concluido' %}var(--green){% else %}var(--yellow){% endif %}">{{ s.duration_minutes }}</span>
-        <span style="font-size:8px;color:var(--gray2)">min</span>
-      </div>
+    <div style="padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+                border-bottom:{% if not loop.last %}1px solid rgba(255,255,255,0.05){% else %}none{% endif %}">
+      <span style="font-size:14px;font-weight:600;color:var(--text-primary);flex:1;min-width:120px">{{ s.title }}</span>
+      <span style="font-size:12px;color:var(--text-secondary)">{{ s.producer }}</span>
+      <span style="font-size:11px;color:{{ sc[s.status] }};background:{{ sc[s.status] }}22;border-radius:20px;padding:3px 10px;font-weight:500">{{ sl[s.status] }}</span>
+      <span style="font-size:12px;font-weight:500;color:var(--yellow)">{{ s.duration_minutes }} min</span>
       <!-- Actions -->
-      <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">
-        {% if s.status not in ('em_andamento','iniciado') %}
-        <form method="POST" action="/shorts/{{ s.id }}/status" style="margin:0">
-          <input type="hidden" name="status" value="em_andamento"/>
-          <button type="submit" style="background:none;border:1px solid var(--green);color:var(--green);padding:3px 7px;cursor:pointer;font-family:var(--font-pixel);font-size:8px">▶</button>
-        </form>{% endif %}
-        {% if s.status not in ('pausado','concluido') %}
-        <form method="POST" action="/shorts/{{ s.id }}/status" style="margin:0">
-          <input type="hidden" name="status" value="pausado"/>
-          <button type="submit" style="background:none;border:1px solid var(--yellow);color:var(--yellow);padding:3px 7px;cursor:pointer;font-family:var(--font-pixel);font-size:8px">⏸</button>
-        </form>{% endif %}
-        {% if s.status != 'concluido' %}
-        <form method="POST" action="/shorts/{{ s.id }}/status" style="margin:0">
-          <input type="hidden" name="status" value="concluido"/>
-          <button type="submit" style="background:none;border:1px solid var(--gray);color:var(--gray2);padding:3px 7px;cursor:pointer;font-family:var(--font-pixel);font-size:8px">✔</button>
-        </form>{% endif %}
-        {% if is_admin %}
-        <form method="POST" action="/shorts/{{ s.id }}/delete" style="margin:0" onsubmit="return confirm('Deletar?')">
-          <button type="submit" style="background:none;border:1px solid var(--r-dark);color:var(--r-dark);padding:3px 7px;cursor:pointer;font-family:var(--font-pixel);font-size:8px">✕</button>
-        </form>{% endif %}
-      </div>
+      {% if s.status not in ('em_andamento','iniciado') %}
+      <form method="POST" action="/shorts/{{ s.id }}/status" style="margin:0">
+        <input type="hidden" name="status" value="em_andamento"/>
+        <button type="submit" style="background:rgba(48,209,88,0.10);border:1px solid rgba(48,209,88,0.25);color:var(--green);border-radius:8px;padding:5px 10px;cursor:pointer;font-size:12px">▶</button>
+      </form>{% endif %}
+      {% if s.status not in ('pausado','concluido') %}
+      <form method="POST" action="/shorts/{{ s.id }}/status" style="margin:0">
+        <input type="hidden" name="status" value="pausado"/>
+        <button type="submit" style="background:rgba(255,214,10,0.08);border:1px solid rgba(255,214,10,0.22);color:var(--yellow);border-radius:8px;padding:5px 10px;cursor:pointer;font-size:12px">⏸</button>
+      </form>{% endif %}
+      {% if s.status != 'concluido' %}
+      <form method="POST" action="/shorts/{{ s.id }}/status" style="margin:0">
+        <input type="hidden" name="status" value="concluido"/>
+        <button type="submit" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);color:var(--text-secondary);border-radius:8px;padding:5px 10px;cursor:pointer;font-size:12px">✔</button>
+      </form>{% endif %}
+      {% if is_admin %}
+      <form method="POST" action="/shorts/{{ s.id }}/delete" style="margin:0" onsubmit="return confirm('Deletar?')">
+        <button type="submit" style="background:rgba(255,69,58,0.08);border:1px solid rgba(255,69,58,0.20);color:var(--red);border-radius:8px;padding:5px 10px;cursor:pointer;font-size:12px">🗑</button>
+      </form>{% endif %}
     </div>
     {% endfor %}
-    {% set conc = shorts | selectattr('status','equalto','concluido') | list %}
-    {% if conc %}
-    {% set avg_m = (conc | sum(attribute='duration_minutes')) // conc|length %}
-    <div style="background:var(--y-dark);padding:8px 14px;display:flex;gap:20px;font-size:9px;border-top:1px solid var(--yellow)">
-      <span style="color:var(--gray2)">TOTAL: <strong style="color:var(--yellow)">{{ shorts|length }}</strong></span>
-      <span style="color:var(--gray2)">CONCLUÍDOS: <strong style="color:var(--green)">{{ conc|length }}</strong></span>
-      <span style="color:var(--gray2)">TEMPO MÉDIO: <strong style="color:var(--yellow)">{{ avg_m }} min</strong></span>
-    </div>
-    {% endif %}
   </div>
   {% else %}
-  <div style="background:var(--card);border:1px dashed var(--y-dark);padding:16px;
-              text-align:center;font-size:10px;color:var(--gray2)">
+  <div style="background:rgba(255,255,255,0.03);border:1px dashed rgba(255,214,10,0.20);
+              border-radius:14px;padding:20px;text-align:center;font-size:13px;color:var(--text-tertiary)">
     Nenhum short registrado.
     <a href="/productions/new?tab=short" style="color:var(--yellow);text-decoration:none;margin-left:8px">+ Criar</a>
   </div>
   {% endif %}
 </div>
+
+
+<!-- ══ EDIT MODAL ══════════════════════════════════════════ -->
+<div id="edit-modal" style="display:none;position:fixed;inset:0;z-index:1000;
+     background:rgba(0,0,0,0.6);backdrop-filter:blur(10px);
+     display:none;align-items:center;justify-content:center">
+  <div style="background:#1c1a28;border:1px solid rgba(255,255,255,0.12);border-radius:20px;
+              padding:24px;width:100%;max-width:440px;box-shadow:0 24px 64px rgba(0,0,0,0.6)">
+    <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:20px">✏️ Editar Produção</div>
+    <form id="edit-form" method="POST" action="">
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:6px">Título</label>
+        <input id="edit-title" name="title" type="text" required
+               style="width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);
+                      border-radius:10px;color:var(--text-primary);font-family:var(--font-ui);font-size:14px;
+                      padding:10px 14px;outline:none;box-sizing:border-box;"
+               onfocus="this.style.borderColor='var(--blue)';this.style.boxShadow='0 0 0 3px rgba(10,132,255,0.15)'"
+               onblur="this.style.borderColor='rgba(255,255,255,0.12)';this.style.boxShadow='none'"/>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:6px">Produtor Principal</label>
+        <input id="edit-producer" name="producer" type="text" required
+               style="width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);
+                      border-radius:10px;color:var(--text-primary);font-family:var(--font-ui);font-size:14px;
+                      padding:10px 14px;outline:none;box-sizing:border-box;"
+               onfocus="this.style.borderColor='var(--blue)';this.style.boxShadow='0 0 0 3px rgba(10,132,255,0.15)'"
+               onblur="this.style.borderColor='rgba(255,255,255,0.12)';this.style.boxShadow='none'"/>
+      </div>
+      <div style="margin-bottom:20px">
+        <label style="display:block;font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:6px">
+          Co-produtores
+          <span style="font-size:11px;color:var(--text-tertiary);font-weight:400"> (separar por vírgula)</span>
+        </label>
+        <input id="edit-co" name="co_producers" type="text"
+               placeholder="Ex: Bob, Carol"
+               style="width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);
+                      border-radius:10px;color:var(--text-primary);font-family:var(--font-ui);font-size:14px;
+                      padding:10px 14px;outline:none;box-sizing:border-box;"
+               onfocus="this.style.borderColor='var(--blue)';this.style.boxShadow='0 0 0 3px rgba(10,132,255,0.15)'"
+               onblur="this.style.borderColor='rgba(255,255,255,0.12)';this.style.boxShadow='none'"/>
+        <div style="font-size:11px;color:var(--text-tertiary);margin-top:6px">Aparece como tags ao lado do produtor principal</div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button type="submit"
+                style="flex:1;background:rgba(10,132,255,0.15);border:1px solid rgba(10,132,255,0.35);
+                       color:var(--blue);border-radius:10px;padding:10px;cursor:pointer;
+                       font-family:var(--font-ui);font-size:13px;font-weight:500">
+          Salvar
+        </button>
+        <button type="button" onclick="closeEdit()"
+                style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);
+                       color:var(--text-secondary);border-radius:10px;padding:10px 18px;cursor:pointer;
+                       font-family:var(--font-ui);font-size:13px">
+          Cancelar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<script>
+function openEdit(id, title, producer, co) {
+  document.getElementById('edit-title').value    = title;
+  document.getElementById('edit-producer').value = producer;
+  document.getElementById('edit-co').value       = co;
+  document.getElementById('edit-form').action    = '/productions/' + id + '/edit';
+  var modal = document.getElementById('edit-modal');
+  modal.style.display = 'flex';
+  setTimeout(function(){ document.getElementById('edit-title').focus(); }, 50);
+}
+function closeEdit() {
+  document.getElementById('edit-modal').style.display = 'none';
+}
+document.getElementById('edit-modal').addEventListener('click', function(e){
+  if (e.target === this) closeEdit();
+});
+document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeEdit(); });
+</script>
 
 {% endblock %}
