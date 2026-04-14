@@ -28,6 +28,13 @@
   <div>
     <div style="font-size:10px;color:var(--text-tertiary);margin-bottom:3px;font-weight:500">Produtor</div>
     <div style="font-size:14px;color:var(--text-primary);font-weight:600">{{ prod.producer }}</div>
+        {% if prod.co_producers %}
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">
+          {% for cp in prod.co_producers.split(',') %}{% if cp.strip() %}
+          <span style="font-size:10px;color:{{ t_col }};background:{{ t_col }}18;border-radius:10px;padding:2px 8px">{{ cp.strip() }}</span>
+          {% endif %}{% endfor %}
+        </div>
+        {% endif %}
   </div>
 
   <div style="width:1px;height:32px;background:var(--border)"></div>
@@ -92,14 +99,85 @@
       <button type="submit" class="action-btn gray-btn" style="font-size:12px;padding:7px 16px">✔ Concluir</button>
     </form>
     {% endif %}
+    <!-- Edit button (always visible) -->
+    <button onclick="openEditModal()"
+            style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);
+                   border-radius:8px;padding:7px 12px;cursor:pointer;color:var(--text-secondary);
+                   font-size:13px;font-family:var(--font-ui);transition:background 0.12s"
+            onmouseover="this.style.background='rgba(255,255,255,0.12)'"
+            onmouseout="this.style.background='rgba(255,255,255,0.07)'">✏️ Editar</button>
     {% if is_admin %}
     <form method="POST" action="/productions/{{ prod.id }}/delete" style="margin:0"
           onsubmit="return confirm('Deletar esta produção?')">
-      <button type="submit" class="action-btn" style="font-size:12px;padding:7px 14px;border-color:rgba(255,69,58,0.3);color:var(--red);background:rgba(255,69,58,0.08)">✕</button>
+      <button type="submit" class="action-btn" style="font-size:12px;padding:7px 14px;border-color:rgba(255,69,58,0.3);color:var(--red);background:rgba(255,69,58,0.08)">🗑</button>
     </form>
     {% endif %}
   </div>
 </div>
+
+
+<!-- ══ EDIT MODAL ══════════════════════════════════════════ -->
+<div id="edit-modal-detail" style="display:none;position:fixed;inset:0;z-index:1000;
+     background:rgba(0,0,0,0.6);backdrop-filter:blur(10px);
+     align-items:center;justify-content:center">
+  <div style="background:#1c1a28;border:1px solid rgba(255,255,255,0.12);border-radius:20px;
+              padding:24px;width:100%;max-width:440px;box-shadow:0 24px 64px rgba(0,0,0,0.6)">
+    <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:20px">✏️ Editar Produção</div>
+    <form method="POST" action="/productions/{{ prod.id }}/edit">
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:6px">Título</label>
+        <input name="title" type="text" value="{{ prod.title }}" required
+               style="width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);
+                      border-radius:10px;color:var(--text-primary);font-family:var(--font-ui);font-size:14px;
+                      padding:10px 14px;outline:none;box-sizing:border-box;"
+               onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='rgba(255,255,255,0.12)'"/>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:6px">Produtor Principal</label>
+        <input name="producer" type="text" value="{{ prod.producer }}" required
+               style="width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);
+                      border-radius:10px;color:var(--text-primary);font-family:var(--font-ui);font-size:14px;
+                      padding:10px 14px;outline:none;box-sizing:border-box;"
+               onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='rgba(255,255,255,0.12)'"/>
+      </div>
+      <div style="margin-bottom:20px">
+        <label style="display:block;font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:6px">
+          Co-produtores
+          <span style="font-size:11px;color:var(--text-tertiary);font-weight:400"> (separar por vírgula)</span>
+        </label>
+        <input name="co_producers" type="text" value="{{ prod.co_producers or '' }}"
+               placeholder="Ex: Bob, Carol"
+               style="width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);
+                      border-radius:10px;color:var(--text-primary);font-family:var(--font-ui);font-size:14px;
+                      padding:10px 14px;outline:none;box-sizing:border-box;"
+               onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='rgba(255,255,255,0.12)'"/>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button type="submit"
+                style="flex:1;background:rgba(10,132,255,0.15);border:1px solid rgba(10,132,255,0.35);
+                       color:var(--blue);border-radius:10px;padding:10px;cursor:pointer;
+                       font-family:var(--font-ui);font-size:13px;font-weight:500">Salvar</button>
+        <button type="button" onclick="closeEditModal()"
+                style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);
+                       color:var(--text-secondary);border-radius:10px;padding:10px 18px;cursor:pointer;
+                       font-family:var(--font-ui);font-size:13px">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openEditModal() {
+  var m = document.getElementById('edit-modal-detail');
+  m.style.display = 'flex';
+}
+function closeEditModal() {
+  document.getElementById('edit-modal-detail').style.display = 'none';
+}
+document.getElementById('edit-modal-detail').addEventListener('click', function(e){
+  if (e.target === this) closeEditModal();
+});
+</script>
 
 
 {% if pt == 'producao' %}
@@ -157,7 +235,37 @@
           <span style="font-size:11px;color:{% if done %}var(--green){% else %}var(--text-tertiary){% endif %}">
             {% if done %}✔ Gravado{% else %}Pendente{% endif %}
           </span>
+          <!-- Note button -->
+          <button onclick="toggleNote({{ prod.id }}, {{ i }})"
+                  title="{% if prod.arc_notes_map.get(i|string) %}Ver comentário{% else %}Comentário{% endif %}"
+                  style="background:{% if prod.arc_notes_map.get(i|string) %}rgba(255,214,10,0.15){% else %}rgba(255,255,255,0.04){% endif %};
+                         border:1px solid {% if prod.arc_notes_map.get(i|string) %}rgba(255,214,10,0.35){% else %}rgba(255,255,255,0.09){% endif %};
+                         border-radius:8px;padding:4px 8px;cursor:pointer;font-size:13px;flex-shrink:0;line-height:1">
+            {% if prod.arc_notes_map.get(i|string) %}💬{% else %}<span style="color:var(--text-tertiary)">💬</span>{% endif %}
+          </button>
         </form>
+        <!-- Note panel -->
+        <div id="note-{{ prod.id }}-{{ i }}" style="display:none;padding:0 16px 12px">
+          <form method="POST" action="/productions/{{ prod.id }}/arc_note" style="margin:0">
+            <input type="hidden" name="arc" value="{{ i }}"/>
+            <textarea name="note" rows="2" placeholder="Comentário sobre este arco..."
+                      style="width:100%;background:rgba(255,214,10,0.06);border:1px solid rgba(255,214,10,0.20);
+                             border-radius:8px;color:var(--text-primary);font-family:var(--font-ui);font-size:13px;
+                             padding:8px 12px;resize:none;outline:none;box-sizing:border-box;line-height:1.4;
+                             margin-bottom:8px">{{ prod.arc_notes_map.get(i|string, '') }}</textarea>
+            <div style="display:flex;gap:8px">
+              <button type="submit" style="background:rgba(255,214,10,0.15);border:1px solid rgba(255,214,10,0.35);
+                      color:var(--yellow);border-radius:8px;padding:6px 14px;cursor:pointer;
+                      font-family:var(--font-ui);font-size:12px;font-weight:500">Salvar</button>
+              {% if prod.arc_notes_map.get(i|string) %}
+              <button type="submit" name="note" value=""
+                      style="background:rgba(255,69,58,0.10);border:1px solid rgba(255,69,58,0.25);
+                             color:var(--red);border-radius:8px;padding:6px 14px;cursor:pointer;
+                             font-family:var(--font-ui);font-size:12px">Apagar</button>
+              {% endif %}
+            </div>
+          </form>
+        </div>
       </div>
       {% endfor %}
     </div>
@@ -363,6 +471,36 @@
                   color:var(--text-tertiary);border-radius:8px;padding:4px 10px;cursor:pointer;font-family:var(--font-ui);font-size:11px">
             {% if arc_chars > 0 %}Editar{% else %}+ Chars{% endif %}
           </button>
+          <!-- Note button -->
+          <button onclick="toggleNote({{ prod.id }}, {{ i }})"
+                  title="{% if prod.arc_notes_map.get(i|string) %}Ver comentário{% else %}Comentário{% endif %}"
+                  style="background:{% if prod.arc_notes_map.get(i|string) %}rgba(255,214,10,0.15){% else %}rgba(255,255,255,0.04){% endif %};
+                         border:1px solid {% if prod.arc_notes_map.get(i|string) %}rgba(255,214,10,0.35){% else %}rgba(255,255,255,0.09){% endif %};
+                         border-radius:8px;padding:4px 8px;cursor:pointer;font-size:13px;flex-shrink:0;line-height:1">
+            {% if prod.arc_notes_map.get(i|string) %}💬{% else %}<span style="color:var(--text-tertiary)">💬</span>{% endif %}
+          </button>
+        </div>
+        <!-- Note panel -->
+        <div id="note-{{ prod.id }}-{{ i }}" style="display:none;padding:0 16px 10px">
+          <form method="POST" action="/productions/{{ prod.id }}/arc_note" style="margin:0">
+            <input type="hidden" name="arc" value="{{ i }}"/>
+            <textarea name="note" rows="2" placeholder="Comentário sobre este arco..."
+                      style="width:100%;background:rgba(255,214,10,0.06);border:1px solid rgba(255,214,10,0.20);
+                             border-radius:8px;color:var(--text-primary);font-family:var(--font-ui);font-size:13px;
+                             padding:8px 12px;resize:none;outline:none;box-sizing:border-box;line-height:1.4;
+                             margin-bottom:8px">{{ prod.arc_notes_map.get(i|string, '') }}</textarea>
+            <div style="display:flex;gap:8px">
+              <button type="submit" style="background:rgba(255,214,10,0.15);border:1px solid rgba(255,214,10,0.35);
+                      color:var(--yellow);border-radius:8px;padding:6px 14px;cursor:pointer;
+                      font-family:var(--font-ui);font-size:12px;font-weight:500">Salvar</button>
+              {% if prod.arc_notes_map.get(i|string) %}
+              <button type="submit" name="note" value=""
+                      style="background:rgba(255,69,58,0.10);border:1px solid rgba(255,69,58,0.25);
+                             color:var(--red);border-radius:8px;padding:6px 14px;cursor:pointer;
+                             font-family:var(--font-ui);font-size:12px">Apagar</button>
+              {% endif %}
+            </div>
+          </form>
         </div>
         <!-- Inline char input (hidden by default) -->
         <div id="char-input-{{ i }}" style="display:none;padding:0 16px 12px">
@@ -579,6 +717,16 @@
     arcCharsMap={};
     var prog=document.getElementById('arc-chars-progress');
     if(prog) prog.style.display='none';
+  };
+
+  window.toggleNote = function(prodId, arcNum) {
+    var el = document.getElementById('note-' + prodId + '-' + arcNum);
+    if (!el) return;
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    if (el.style.display === 'block') {
+      var ta = el.querySelector('textarea');
+      if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+    }
   };
 })();
 </script>
