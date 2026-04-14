@@ -382,7 +382,7 @@ document.getElementById('edit-modal-detail').addEventListener('click', function(
   </div>
 </div>
 
-<!-- Analisador -->
+<!-- Analisador — PRODUÇÃO only -->
 <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
   <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px">
     <span style="font-size:11px;font-weight:600;color:#bf5af2;text-transform:uppercase;letter-spacing:0.5px">Analisador de Roteiro</span>
@@ -425,7 +425,19 @@ document.getElementById('edit-modal-detail').addEventListener('click', function(
 
   <!-- Left: Arc list with manual chars -->
   <div>
-    <div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Arcos</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <span style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px">Arcos</span>
+      {% if pt == 'roteiro' %}
+      <form method="POST" action="/productions/{{ prod.id }}/add_arc" style="margin:0">
+        <button type="submit"
+                style="background:{{ t_col }}15;border:1px solid {{ t_col }}40;color:{{ t_col }};
+                       border-radius:20px;padding:5px 14px;cursor:pointer;font-family:var(--font-ui);
+                       font-size:12px;font-weight:500;transition:background 0.12s">
+          + Arco
+        </button>
+      </form>
+      {% endif %}
+    </div>
 
     <!-- Arc progress -->
     <div style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px">
@@ -438,16 +450,19 @@ document.getElementById('edit-modal-detail').addEventListener('click', function(
       </div>
     </div>
 
-    <!-- Arc list with inline char input -->
+    <!-- Arc list -->
     <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:14px;overflow:hidden">
       {% for i in range(1, prod.total_arcs + 1) %}
       {% set done = i in prod.arcs_done_list %}
       {% set arc_chars = prod.arc_chars_map.get(i, 0) %}
-      <div style="border-bottom:{% if not loop.last %}1px solid var(--border){% else %}none{% endif %};
+      {% set has_note = prod.arc_notes_map.get(i|string) %}
+      <div style="border-bottom:{% if not loop.last %}1px solid rgba(255,255,255,0.04){% else %}none{% endif %};
                   background:{% if done %}rgba(48,209,88,0.04){% else %}transparent{% endif %}">
-        <!-- Arc header row -->
-        <div style="display:flex;align-items:center;padding:10px 16px;gap:10px">
-          <form method="POST" action="/productions/{{ prod.id }}/arc" style="margin:0;display:flex;align-items:center;gap:10px;flex:1">
+
+        <!-- Arc row -->
+        <div style="display:flex;align-items:center;padding:11px 14px;gap:10px">
+          <!-- Check -->
+          <form method="POST" action="/productions/{{ prod.id }}/arc" style="margin:0">
             <input type="hidden" name="arc" value="{{ i }}"/>
             <input type="hidden" name="action" value="{% if done %}uncheck{% else %}check{% endif %}"/>
             <button type="submit" style="
@@ -458,64 +473,60 @@ document.getElementById('edit-modal-detail').addEventListener('click', function(
                 font-size:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center">
               {% if done %}✔{% endif %}
             </button>
-            <span style="font-size:13px;font-weight:500;flex:1;
-                         color:{% if done %}{{ t_col }}{% else %}var(--text-primary){% endif %};
-                         {% if done %}opacity:.65{% endif %}">
-              Arco {{ i }}
-            </span>
           </form>
+          <!-- Title + chars badge -->
+          <span style="font-size:13px;font-weight:500;flex:1;
+                       color:{% if done %}{{ t_col }}{% else %}var(--text-primary){% endif %};
+                       {% if done %}opacity:.7{% endif %}">Arco {{ i }}</span>
           {% if arc_chars > 0 %}
           <span style="font-size:12px;font-weight:600;color:{{ t_col }}">{{ "{:,}".format(arc_chars).replace(",",".") }} ch</span>
           {% endif %}
-          <button onclick="toggleCharInput({{ i }})" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);
-                  color:var(--text-tertiary);border-radius:8px;padding:4px 10px;cursor:pointer;font-family:var(--font-ui);font-size:11px">
+          <!-- Toggle char input -->
+          <button onclick="toggleCharInput({{ i }})"
+                  style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);
+                         color:var(--text-tertiary);border-radius:8px;padding:4px 10px;
+                         cursor:pointer;font-family:var(--font-ui);font-size:11px">
             {% if arc_chars > 0 %}Editar{% else %}+ Chars{% endif %}
           </button>
           <!-- Note button -->
           <button onclick="toggleNote({{ prod.id }}, {{ i }})"
-                  title="{% if prod.arc_notes_map.get(i|string) %}Ver comentário{% else %}Comentário{% endif %}"
-                  style="background:{% if prod.arc_notes_map.get(i|string) %}rgba(255,214,10,0.15){% else %}rgba(255,255,255,0.04){% endif %};
-                         border:1px solid {% if prod.arc_notes_map.get(i|string) %}rgba(255,214,10,0.35){% else %}rgba(255,255,255,0.09){% endif %};
-                         border-radius:8px;padding:4px 8px;cursor:pointer;font-size:13px;flex-shrink:0;line-height:1">
-            {% if prod.arc_notes_map.get(i|string) %}💬{% else %}<span style="color:var(--text-tertiary)">💬</span>{% endif %}
+                  style="background:{% if has_note %}rgba(255,214,10,0.15){% else %}rgba(255,255,255,0.04){% endif %};
+                         border:1px solid {% if has_note %}rgba(255,214,10,0.35){% else %}rgba(255,255,255,0.09){% endif %};
+                         border-radius:8px;padding:4px 8px;cursor:pointer;font-size:13px;line-height:1">
+            {% if has_note %}💬{% else %}<span style="color:var(--text-tertiary)">💬</span>{% endif %}
           </button>
         </div>
+
+        <!-- Char input (hidden by default, open if already has value) -->
+        <div id="char-input-{{ i }}" style="display:{% if arc_chars > 0 %}none{% else %}none{% endif %};padding:0 14px 12px">
+          <form method="POST" action="/productions/{{ prod.id }}/arc_chars" style="margin:0;display:flex;gap:8px;align-items:center">
+            <input type="hidden" name="arc" value="{{ i }}"/>
+            <input type="number" name="chars" value="{{ arc_chars }}" min="0" placeholder="0"
+                   style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);
+                          border-radius:8px;color:var(--text-primary);font-family:var(--font-ui);
+                          font-size:13px;padding:7px 12px;width:130px;outline:none;"/>
+            <span style="font-size:12px;color:var(--text-tertiary)">chars</span>
+            <button type="submit"
+                    style="background:{{ t_col }}20;border:1px solid {{ t_col }}50;color:{{ t_col }};
+                           border-radius:8px;padding:7px 14px;cursor:pointer;font-family:var(--font-ui);
+                           font-size:12px;font-weight:500">Salvar</button>
+          </form>
+        </div>
+
         <!-- Note panel -->
-        <div id="note-{{ prod.id }}-{{ i }}" style="display:none;padding:0 16px 10px">
+        <div id="note-{{ prod.id }}-{{ i }}" style="display:none;padding:0 14px 12px">
           <form method="POST" action="/productions/{{ prod.id }}/arc_note" style="margin:0">
             <input type="hidden" name="arc" value="{{ i }}"/>
             <textarea name="note" rows="2" placeholder="Comentário sobre este arco..."
                       style="width:100%;background:rgba(255,214,10,0.06);border:1px solid rgba(255,214,10,0.20);
                              border-radius:8px;color:var(--text-primary);font-family:var(--font-ui);font-size:13px;
-                             padding:8px 12px;resize:none;outline:none;box-sizing:border-box;line-height:1.4;
-                             margin-bottom:8px">{{ prod.arc_notes_map.get(i|string, '') }}</textarea>
+                             padding:8px 12px;resize:none;outline:none;box-sizing:border-box;line-height:1.4;margin-bottom:8px">{{ prod.arc_notes_map.get(i|string, '') }}</textarea>
             <div style="display:flex;gap:8px">
-              <button type="submit" style="background:rgba(255,214,10,0.15);border:1px solid rgba(255,214,10,0.35);
-                      color:var(--yellow);border-radius:8px;padding:6px 14px;cursor:pointer;
-                      font-family:var(--font-ui);font-size:12px;font-weight:500">Salvar</button>
-              {% if prod.arc_notes_map.get(i|string) %}
-              <button type="submit" name="note" value=""
-                      style="background:rgba(255,69,58,0.10);border:1px solid rgba(255,69,58,0.25);
-                             color:var(--red);border-radius:8px;padding:6px 14px;cursor:pointer;
-                             font-family:var(--font-ui);font-size:12px">Apagar</button>
+              <button type="submit" style="background:rgba(255,214,10,0.15);border:1px solid rgba(255,214,10,0.35);color:var(--yellow);border-radius:8px;padding:6px 14px;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500">Salvar</button>
+              {% if has_note %}
+              <button type="submit" name="note" value="" style="background:rgba(255,69,58,0.10);border:1px solid rgba(255,69,58,0.25);color:var(--red);border-radius:8px;padding:6px 14px;cursor:pointer;font-family:var(--font-ui);font-size:12px">Apagar</button>
               {% endif %}
             </div>
-          </form>
-        </div>
-        <!-- Inline char input (hidden by default) -->
-        <div id="char-input-{{ i }}" style="display:none;padding:0 16px 12px">
-          <form method="POST" action="/productions/{{ prod.id }}/arc_chars" style="margin:0;display:flex;gap:8px;align-items:center">
-            <input type="hidden" name="arc" value="{{ i }}"/>
-            <input type="number" name="chars" value="{{ arc_chars }}"
-                   min="0" placeholder="0"
-                   style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);border-radius:8px;
-                          color:var(--text-primary);font-family:var(--font-ui);font-size:13px;
-                          padding:7px 12px;width:140px;outline:none;"/>
-            <span style="font-size:12px;color:var(--text-tertiary)">chars escritos</span>
-            <button type="submit" style="background:{{ t_col }}22;border:1px solid {{ t_col }}55;color:{{ t_col }};
-                    border-radius:8px;padding:7px 14px;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500">
-              Salvar
-            </button>
           </form>
         </div>
       </div>
@@ -527,50 +538,53 @@ document.getElementById('edit-modal-detail').addEventListener('click', function(
     {% set meta_dia = (prod.script_chars / 4) | round(0) | int %}
     <div style="margin-top:12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:14px;padding:16px">
       <div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:12px">Progresso de Escrita</div>
-      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+      <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:12px">
         <div>
-          <div style="font-size:10px;color:var(--text-tertiary);margin-bottom:2px">Total escrito</div>
-          <span style="font-size:22px;font-weight:300;color:{{ t_col }};letter-spacing:-0.5px">{{ "{:,}".format(prod.script_chars).replace(",",".") }}</span>
+          <div style="font-size:10px;color:var(--text-tertiary);margin-bottom:2px">Total</div>
+          <span style="font-size:24px;font-weight:300;color:{{ t_col }};letter-spacing:-0.5px">{{ "{:,}".format(prod.script_chars).replace(",",".") }}</span>
           <span style="font-size:10px;color:var(--text-tertiary)"> ch</span>
         </div>
         <div>
           <div style="font-size:10px;color:var(--yellow);margin-bottom:2px;font-weight:600">Meta/Dia ÷4</div>
-          <span style="font-size:22px;font-weight:300;color:var(--yellow);letter-spacing:-0.5px">{{ "{:,}".format(meta_dia).replace(",",".") }}</span>
+          <span style="font-size:24px;font-weight:300;color:var(--yellow);letter-spacing:-0.5px">{{ "{:,}".format(meta_dia).replace(",",".") }}</span>
           <span style="font-size:10px;color:var(--text-tertiary)"> ch</span>
         </div>
         <div>
           <div style="font-size:10px;color:var(--text-tertiary);margin-bottom:2px">Média/Arco</div>
-          <span style="font-size:22px;font-weight:300;color:var(--text-primary);letter-spacing:-0.5px">{{ "{:,}".format(prod.arc_chars_avg).replace(",",".") }}</span>
+          <span style="font-size:24px;font-weight:300;color:var(--text-secondary);letter-spacing:-0.5px">{{ "{:,}".format(prod.arc_chars_avg).replace(",",".") }}</span>
         </div>
       </div>
-      <div style="background:rgba(255,255,255,0.07);height:6px;border-radius:3px;overflow:hidden">
+      <div style="background:rgba(255,255,255,0.07);height:5px;border-radius:3px;overflow:hidden">
         <div style="height:100%;background:{{ t_col }};width:{{ prod.arc_pct }}%;border-radius:3px"></div>
       </div>
-      <div style="text-align:right;font-size:11px;color:{{ t_col }};margin-top:4px">{{ prod.arc_pct }}%</div>
+      <div style="text-align:right;font-size:11px;color:{{ t_col }};margin-top:4px;font-weight:500">{{ prod.arc_pct }}%</div>
     </div>
     {% endif %}
   </div>
 
-  <!-- Right: Time tracking -->
+  <!-- Right: Timer -->
   <div>
     <div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Tempo</div>
 
-    <!-- Big timer -->
-    <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);border-radius:18px;padding:28px 20px;text-align:center;margin-bottom:14px">
-      <div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">
-        {% if prod.status == 'concluido' %}Tempo total{% else %}Em andamento{% endif %}
+    <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);
+                border-radius:18px;padding:32px 24px;text-align:center;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:14px;
+                  color:{% if prod.status=='concluido' %}var(--green){% elif prod.status=='pausado' %}var(--yellow){% else %}{{ t_col }}{% endif %}">
+        {% if prod.status == 'concluido' %}Concluído
+        {% elif prod.status == 'pausado' %}Pausado
+        {% else %}Em andamento{% endif %}
       </div>
-      <div style="font-size:52px;font-weight:200;color:{{ t_col }};letter-spacing:-2px;line-height:1">
+      <div style="font-size:56px;font-weight:200;letter-spacing:-3px;line-height:1;
+                  color:{% if prod.status=='concluido' %}var(--green){% else %}{{ t_col }}{% endif %}">
         {{ prod.duration_label }}
       </div>
-      {% if prod.status != 'concluido' %}
-      <div style="font-size:12px;color:var(--text-tertiary);margin-top:8px">
-        {% if prod.status == 'pausado' %}⏸ pausado{% else %}⏱ em andamento{% endif %}
+      {% if prod.status not in ('concluido',) %}
+      <div style="font-size:12px;color:var(--text-tertiary);margin-top:10px">
+        {% if prod.status == 'pausado' %}⏸ tempo pausado{% else %}⏱ contando desde o início{% endif %}
       </div>
       {% endif %}
     </div>
 
-    <!-- Notes -->
     {% if prod.notes %}
     <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:14px 16px;font-size:13px;color:var(--text-secondary);line-height:1.6">
       <div style="font-size:10px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px">Observações</div>
@@ -582,7 +596,7 @@ document.getElementById('edit-modal-detail').addEventListener('click', function(
 
 {% endif %}
 
-<div style="margin-top:16px">
+<div style="margin-top:20px">
   <a href="/productions" class="action-btn gray-btn" style="font-size:12px">← Voltar</a>
 </div>
 
