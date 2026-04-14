@@ -535,7 +535,7 @@ document.getElementById('edit-modal-detail').addEventListener('click', function(
 
     <!-- Chars summary -->
     {% if prod.script_chars > 0 %}
-    {% set meta_dia = (prod.script_chars / 4) | round(0) | int %}
+    {% set meta_dia = 25000 %}
     <div style="margin-top:12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:14px;padding:16px">
       <div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:12px">Progresso de Escrita</div>
       <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:12px">
@@ -545,8 +545,8 @@ document.getElementById('edit-modal-detail').addEventListener('click', function(
           <span style="font-size:10px;color:var(--text-tertiary)"> ch</span>
         </div>
         <div>
-          <div style="font-size:10px;color:var(--yellow);margin-bottom:2px;font-weight:600">Meta/Dia ÷4</div>
-          <span style="font-size:24px;font-weight:300;color:var(--yellow);letter-spacing:-0.5px">{{ "{:,}".format(meta_dia).replace(",",".") }}</span>
+          <div style="font-size:10px;color:var(--yellow);margin-bottom:2px;font-weight:600">Meta/Dia</div>
+          <span style="font-size:24px;font-weight:300;color:var(--yellow);letter-spacing:-0.5px">25.000</span>
           <span style="font-size:10px;color:var(--text-tertiary)"> ch</span>
         </div>
         <div>
@@ -555,12 +555,10 @@ document.getElementById('edit-modal-detail').addEventListener('click', function(
         </div>
       </div>
       <div style="background:rgba(255,255,255,0.07);height:5px;border-radius:3px;overflow:hidden">
-        <div style="height:100%;background:{{ t_col }};width:{{ prod.arc_pct }}%;border-radius:3px"></div>
+        {% set chars_pct_25k = [100, (prod.script_chars / 25000 * 100) | round(0) | int] | min %}
+        <div style="height:100%;background:{{ t_col }};width:{{ chars_pct_25k }}%;border-radius:3px"></div>
       </div>
-      <div style="text-align:right;font-size:11px;color:{{ t_col }};margin-top:4px;font-weight:500">{{ prod.arc_pct }}%</div>
-    </div>
-    {% endif %}
-  </div>
+      <div style="text-align:right;font-size:11px;color:{{ t_col }};margin-top:4px;font-weight:500">{{ chars_pct_25k }}%</div>
 
   <!-- Right: Timer -->
   <div>
