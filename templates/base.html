@@ -3,102 +3,91 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>◆ PRODUÇÃO PHOENIX — {% block title %}{% endblock %}</title>
+  <title>Produção Phoenix — {% block title %}{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="/static/css/style.css"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
-<!-- ░░░░ SCANLINE OVERLAY ░░░░ -->
-<div class="scanlines" aria-hidden="true"></div>
-
-<!-- ░░░░ LAYOUT ░░░░ -->
 <div class="layout">
 
   <!-- ══ SIDEBAR ══════════════════════════════════════════ -->
   <aside class="sidebar">
 
-    <!-- Logo -->
     <div class="logo-block">
       <div class="logo-inner">
         <div class="logo-bar"></div>
-        <span class="logo-title">◆ PRODUÇÃO PHOENIX ◆</span>
-        <span class="logo-sub">SISTEMA DE REGRAVAÇÔES</span>
-        <span class="logo-ver">v2.0 · WEB EDITION</span>
+        <span class="logo-title">Produção Phoenix</span>
+        <span class="logo-sub">Sistema de Regravaçôes</span>
+        <span class="logo-ver">v2.0 · Web Edition</span>
       </div>
     </div>
 
     <div class="sidebar-divider"></div>
 
-    <!-- Nav -->
     <nav class="nav">
       {% if is_admin %}
-        <!-- ADMIN MENU -->
         <a href="/dashboard" class="pixel-btn blue {% if active=='dashboard' %}active{% endif %}">
           <span class="btn-stripe"></span>
-          <span class="btn-icon">◈</span>
-          <span class="btn-label">DASHBOARD</span>
+          <span class="btn-icon">⊞</span>
+          <span class="btn-label">Dashboard</span>
         </a>
         <a href="/reports" class="pixel-btn yellow {% if active=='reports' %}active{% endif %}">
           <span class="btn-stripe"></span>
-          <span class="btn-icon">⚑</span>
-          <span class="btn-label">RELATÓRIOS</span>
+          <span class="btn-icon">◑</span>
+          <span class="btn-label">Relatórios</span>
         </a>
         <a href="/productions" class="pixel-btn red {% if active=='productions' %}active{% endif %}">
           <span class="btn-stripe"></span>
           <span class="btn-icon">▶</span>
-          <span class="btn-label">PRODUÇÕES</span>
+          <span class="btn-label">Produções</span>
         </a>
       {% else %}
-        <!-- PUBLIC MENU -->
         <a href="/register" class="pixel-btn green {% if active=='register' %}active{% endif %}">
           <span class="btn-stripe"></span>
-          <span class="btn-icon">✚</span>
-          <span class="btn-label">REGRAVAÇÔES</span>
+          <span class="btn-icon">+</span>
+          <span class="btn-label">Regravaçôes</span>
         </a>
         <a href="/productions/new" class="pixel-btn red {% if active=='production_new' %}active{% endif %}">
           <span class="btn-stripe"></span>
           <span class="btn-icon">▶</span>
-          <span class="btn-label">NOVA PRODUÇÃO</span>
+          <span class="btn-label">Nova Produção</span>
         </a>
         <a href="/productions" class="pixel-btn blue {% if active=='productions' %}active{% endif %}">
           <span class="btn-stripe"></span>
-          <span class="btn-icon">◈</span>
-          <span class="btn-label">PRODUÇÕES</span>
+          <span class="btn-icon">⊞</span>
+          <span class="btn-label">Produções</span>
         </a>
       {% endif %}
     </nav>
 
     <div class="sidebar-divider"></div>
 
-    <!-- Auth block -->
-    <div style="padding:8px 12px">
+    <div style="padding:0 8px">
       {% if is_admin %}
-        <div style="font-size:9px;color:var(--g-dark);margin-bottom:6px;letter-spacing:1px">◆ ADMIN ATIVO</div>
-        <a href="/logout" style="display:flex;align-items:center;gap:8px;padding:9px 12px 9px 16px;font-size:10px;border:2px solid var(--gray);color:var(--gray2);text-decoration:none;background:var(--card);box-shadow:3px 3px 0 rgba(0,0,0,.4);position:relative">
-          <span style="position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--gray)"></span>
-          <span>⎋</span> <span>SAIR</span>
+        <div style="font-size:10px;color:var(--text-tertiary);padding:4px 12px 6px;text-transform:uppercase;letter-spacing:0.5px">Admin ativo</div>
+        <a href="/logout" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r-sm);text-decoration:none;font-size:13px;font-weight:500;color:var(--red);transition:background 0.12s" onmouseover="this.style.background='rgba(255,69,58,0.10)'" onmouseout="this.style.background='transparent'">
+          <span style="font-size:14px;width:20px;text-align:center">↪</span>
+          <span>Sair</span>
         </a>
       {% else %}
-        <div style="font-size:9px;color:var(--gray);margin-bottom:6px;letter-spacing:1px">◆ ÁREA RESTRITA</div>
-        <a href="/login" style="display:flex;align-items:center;gap:8px;padding:9px 12px 9px 16px;font-size:10px;border:2px solid var(--blue);color:var(--b-soft);text-decoration:none;background:var(--card);box-shadow:3px 3px 0 var(--b-dark);position:relative">
-          <span style="position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--blue)"></span>
-          <span>🔒</span> <span>ACESSO ADMIN</span>
+        <div style="font-size:10px;color:var(--text-tertiary);padding:4px 12px 6px;text-transform:uppercase;letter-spacing:0.5px">Área restrita</div>
+        <a href="/login" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r-sm);text-decoration:none;font-size:13px;font-weight:500;color:var(--blue);transition:background 0.12s" onmouseover="this.style.background='rgba(10,132,255,0.10)'" onmouseout="this.style.background='transparent'">
+          <span style="font-size:14px;width:20px;text-align:center">🔒</span>
+          <span>Acesso Admin</span>
         </a>
       {% endif %}
     </div>
 
-    <!-- Mini stat -->
     <div class="mini-stat" id="mini-stat-block">
-      <div class="mini-stat-label">◆ TOTAL GERAL</div>
+      <div class="mini-stat-label">Total</div>
       <div class="mini-stat-value" id="mini-total">—</div>
-      <div class="mini-stat-sub">regravaçôes registradas</div>
+      <div class="mini-stat-sub">regravaçôes</div>
     </div>
 
     <div class="sidebar-footer">
-      100% FREE · OPEN SOURCE<br/>
       Flask · SQLite · Chart.js
     </div>
   </aside>
@@ -106,15 +95,13 @@
   <!-- ══ MAIN ═════════════════════════════════════════════ -->
   <main class="main-area">
 
-    <!-- Header bar -->
     <header class="topbar">
-      <span class="topbar-title">{% block header_icon %}{% endblock %}&nbsp;{% block header_title %}{% endblock %}</span>
+      <span class="topbar-title">{% block header_icon %}{% endblock %} {% block header_title %}{% endblock %}</span>
       <span class="topbar-clock" id="clock"></span>
     </header>
 
     <div class="topbar-border"></div>
 
-    <!-- Page content -->
     <div class="page-content">
       {% block content %}{% endblock %}
     </div>
@@ -123,18 +110,15 @@
 </div>
 
 <script>
-  // Clock
   function tick(){
     const n = new Date();
-    const pad = v => String(v).padStart(2,'0');
+    const p = v => String(v).padStart(2,'0');
     document.getElementById('clock').textContent =
-      `[ ${pad(n.getDate())}/${pad(n.getMonth()+1)}/${n.getFullYear()}  ${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())} ]`;
+      `${p(n.getDate())}/${p(n.getMonth()+1)}/${n.getFullYear()}  ${p(n.getHours())}:${p(n.getMinutes())}:${p(n.getSeconds())}`;
   }
   tick(); setInterval(tick, 1000);
 
-  // Mini-stat total
   fetch('/api/chart-data').then(r=>r.json()).then(d=>{
-    // sum all producers
     const total = d.producers.reduce((s,p)=>s+p.total, 0);
     const el = document.getElementById('mini-total');
     el.textContent = total;
