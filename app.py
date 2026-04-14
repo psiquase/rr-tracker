@@ -260,7 +260,7 @@ def db_production_report():
         p['prod_type']       = p.get('prod_type') or 'producao'
         p['arcs_done_list']  = json.loads(p.get('arcs_done') or '[]')
         p['arcs_done_count'] = len(p['arcs_done_list'])
-        if type_id == 'producao':
+        if p['prod_type'] == 'producao':
             if p['status'] == 'concluido' and p.get('completed_at'):
                 p['duration_bdays'] = calc_bdays(p['started_at'], p['completed_at'])
             else:
