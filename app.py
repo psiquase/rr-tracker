@@ -15,6 +15,27 @@ from flask import (Flask, render_template, request, jsonify,
                    redirect, url_for, session, send_file)
 app = Flask(__name__)
 
+# ── Cache busting: compute CSS version once at startup ────
+import hashlib as _hashlib
+_css_path = os.path.join(os.path.dirname(__file__), 'static', 'css', 'style.css')
+try:
+    _css_v = _hashlib.md5(open(_css_path,'rb').read()).hexdigest()[:8]
+except Exception:
+    _css_v = '1'
+
+@app.context_processor
+def inject_css_version():
+    return {'css_v': _css_v}
+
+# No-cache on HTML responses; versioned CSS handles itself
+@app.after_request
+def add_cache_headers(response):
+    if 'text/html' in response.content_type:
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma']        = 'no-cache'
+        response.headers['Expires']       = '0'
+    return response
+
 # ── Secret key for sessions (change this in production!) ─────
 app.secret_key = os.environ.get("SECRET_KEY", "phoenix-pixel-2026")
 
@@ -891,7 +912,18 @@ def production_arc_note(pid):
     return redirect(url_for("production_detail", pid=pid))
 
 
-@app.route("/productions/<int:pid>/edit", methods=["POST"])
+@app.route("/productions/<int:pid>/add_arc", methods=["POST"])
+def production_add_arc(pid):
+    """Add one more arc to a production (for roteiro type)."""
+    with get_db() as c:
+        p = c.execute("SELECT total_arcs FROM productions WHERE id=?", (pid,)).fetchone()
+        if not p:
+            return redirect(url_for("productions"))
+        new_total = p["total_arcs"] + 1
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        c.execute("UPDATE productions SET total_arcs=?, updated_at=? WHERE id=?",
+                  (new_total, now, pid))
+    return redirect(url_for("production_detail", pid=pid))
 def production_edit(pid):
     title        = request.form.get("title", "").strip()
     producer     = request.form.get("producer", "").strip()
