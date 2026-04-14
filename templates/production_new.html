@@ -113,7 +113,7 @@
                  placeholder="Seu nome..." value="{{ request.form.get('producer','') }}" required/>
         </div>
 
-        {% if tab != 'short' %}
+        {% if tab in ('producao', 'decupagem', 'edicao') %}
         <!-- Script / arc detection — all types except short -->
         <div class="field-group">
           <label class="field-label">◆ COLE O ROTEIRO <span style="color:var(--gray2)">(detecta arcos automaticamente)</span></label>
