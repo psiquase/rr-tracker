@@ -95,7 +95,7 @@
   } %}
   {% set t_icon, t_header, t_ph = type_labels.get(tab, type_labels['producao']) %}
 
-  <div class="form-card" style="border-color:{{ cur_color }};box-shadow:6px 6px 0 rgba(0,0,0,.4)">
+  <div class="form-card" style="border-color:{{ cur_color }};">
     <div class="form-header" style="background:{{ cur_color }};color:{% if tab=='roteiro' %}#fff{% else %}var(--bg){% endif %}">
       <span>{{ t_icon }}</span>
       <span>{{ t_header }}</span>
