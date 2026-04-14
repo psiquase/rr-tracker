@@ -15,10 +15,17 @@ from flask import (Flask, render_template, request, jsonify,
                    redirect, url_for, session, send_file)
 app = Flask(__name__)
 
-# ── Simple CSS cache-busting version ─────────────────────
+# ── Cache busting: compute CSS version once at startup ────
+import hashlib as _hashlib
+_css_path = os.path.join(os.path.dirname(__file__), 'static', 'css', 'style.css')
+try:
+    _css_v = _hashlib.md5(open(_css_path,'rb').read()).hexdigest()[:8]
+except Exception:
+    _css_v = '1'
+
 @app.context_processor
 def inject_css_version():
-    return {'css_v': '45'}
+    return {'css_v': _css_v}
 
 # No-cache on HTML responses; versioned CSS handles itself
 @app.after_request
@@ -917,9 +924,6 @@ def production_add_arc(pid):
         c.execute("UPDATE productions SET total_arcs=?, updated_at=? WHERE id=?",
                   (new_total, now, pid))
     return redirect(url_for("production_detail", pid=pid))
-
-
-@app.route("/productions/<int:pid>/edit", methods=["POST"])
 def production_edit(pid):
     title        = request.form.get("title", "").strip()
     producer     = request.form.get("producer", "").strip()
