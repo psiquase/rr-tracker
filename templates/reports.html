@@ -6,10 +6,10 @@
 {% block content %}
 
 <!-- ══ TAB SWITCHER ══════════════════════════════════════ -->
-<div style="display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid var(--border2)">
+<div style="display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid var(--border2);flex-wrap:wrap">
 
   <a href="/reports?tab=regravaçoes&w={{ weeks_back }}"
-     style="padding:10px 22px;font-size:11px;letter-spacing:1px;text-decoration:none;
+     style="padding:10px 18px;font-size:10px;letter-spacing:1px;text-decoration:none;
             border:2px solid {% if tab=='regravaçoes' %}var(--yellow){% else %}var(--border2){% endif %};
             border-bottom:none;
             background:{% if tab=='regravaçoes' %}var(--card){% else %}var(--card2){% endif %};
@@ -18,18 +18,25 @@
     ⚑ &nbsp;REGRAVAÇÔES
   </a>
 
-  <a href="/reports?tab=producoes&w={{ weeks_back }}"
-     style="padding:10px 22px;font-size:11px;letter-spacing:1px;text-decoration:none;
-            border:2px solid {% if tab=='producoes' %}var(--blue){% else %}var(--border2){% endif %};
+  {% for t in [
+    {'id':'producao',  'icon':'▶',  'label':'PRODUÇÃO',  'col':'var(--red)'},
+    {'id':'roteiro',   'icon':'📝', 'label':'ROTEIRO',   'col':'#bb44ff'},
+    {'id':'decupagem', 'icon':'✂️', 'label':'DECUPAGEM', 'col':'var(--blue)'},
+    {'id':'edicao',    'icon':'🎬', 'label':'EDIÇÃO',    'col':'var(--green)'},
+  ] %}
+  <a href="/reports?tab={{ t.id }}&w={{ weeks_back }}"
+     style="padding:10px 18px;font-size:10px;letter-spacing:1px;text-decoration:none;
+            border:2px solid {% if tab==t.id %}{{ t.col }}{% else %}var(--border2){% endif %};
             border-bottom:none;
-            background:{% if tab=='producoes' %}var(--card){% else %}var(--card2){% endif %};
-            color:{% if tab=='producoes' %}var(--blue){% else %}var(--gray2){% endif %};
+            background:{% if tab==t.id %}var(--card){% else %}var(--card2){% endif %};
+            color:{% if tab==t.id %}{{ t.col }}{% else %}var(--gray2){% endif %};
             position:relative;top:2px">
-    ▶ &nbsp;PRODUÇÕES
+    {{ t.icon }} &nbsp;{{ t.label }}
   </a>
+  {% endfor %}
 
   <a href="/reports?tab=shorts&w={{ weeks_back }}"
-     style="padding:10px 22px;font-size:11px;letter-spacing:1px;text-decoration:none;
+     style="padding:10px 18px;font-size:10px;letter-spacing:1px;text-decoration:none;
             border:2px solid {% if tab=='shorts' %}var(--yellow){% else %}var(--border2){% endif %};
             border-bottom:none;
             background:{% if tab=='shorts' %}var(--card){% else %}var(--card2){% endif %};
@@ -145,173 +152,86 @@
 
 
 <!-- ══ TAB: PRODUÇÕES ════════════════════════════════════ -->
-{% elif tab == 'producoes' %}
+{% elif tab in ('producao','roteiro','decupagem','edicao') %}
 
-  <!-- ── Summary cards por produtor ───────────────────── -->
-  <div style="margin-bottom:10px">
-    <span class="section-title blue">◆ RESUMO POR PRODUTOR</span>
+{% set TYPE_META = {
+  'producao':  {'icon':'▶',  'label':'PRODUÇÃO',  'col':'var(--red)'},
+  'roteiro':   {'icon':'📝', 'label':'ROTEIRO',   'col':'#bb44ff'},
+  'decupagem': {'icon':'✂️', 'label':'DECUPAGEM', 'col':'var(--blue)'},
+  'edicao':    {'icon':'🎬', 'label':'EDIÇÃO',    'col':'var(--green)'},
+} %}
+{% set tm = TYPE_META[tab] %}
+{% set icon = tm.icon %}
+{% set label = tm.label %}
+{% set col = tm.col %}
+{% set ts = types_summ[tab] %}
+
+<!-- Summary bar -->
+<div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:20px;
+            background:var(--panel);border:1px solid var(--border2);padding:12px 16px">
+  <div><div style="font-size:9px;color:var(--gray2)">TOTAL</div>
+    <span style="font-family:var(--font-vt);font-size:24px;color:{{ col }}">{{ ts.total }}</span></div>
+  <div><div style="font-size:9px;color:var(--gray2)">EM ANDAMENTO</div>
+    <span style="font-family:var(--font-vt);font-size:24px;color:var(--green)">{{ ts.andamento }}</span></div>
+  <div><div style="font-size:9px;color:var(--gray2)">PAUSADAS</div>
+    <span style="font-family:var(--font-vt);font-size:24px;color:var(--yellow)">{{ ts.pausado }}</span></div>
+  <div><div style="font-size:9px;color:var(--gray2)">CONCLUÍDAS</div>
+    <span style="font-family:var(--font-vt);font-size:24px;color:var(--green)">{{ ts.concluido }}</span></div>
+  {% if ts.avg_label %}
+  <div style="border-left:2px solid {{ col }}33;padding-left:20px">
+    <div style="font-size:9px;color:var(--gray2)">TEMPO MÉDIO</div>
+    <span style="font-family:var(--font-vt);font-size:24px;color:{{ col }}">{{ ts.avg_label }}</span>
   </div>
+  {% endif %}
+</div>
 
-  {% if prod_by_producer %}
-  <div class="table-wrap" style="margin-bottom:24px">
-    <table class="pixel-table">
-      <thead>
-        <tr>
-          <th>PRODUTOR</th>
-          <th style="text-align:center">TOTAL</th>
-          <th style="text-align:center">INICIADAS</th>
-          <th style="text-align:center">EM ANDAMENTO</th>
-          <th style="text-align:center">PAUSADAS</th>
-          <th style="text-align:center">FINALIZADAS</th>
-          <th style="text-align:center">TEMPO MÉDIO</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for g in prod_by_producer | sort(attribute='total', reverse=True) %}
-        <tr>
-          <td style="color:var(--white);font-size:12px">{{ g.producer }}</td>
-          <td style="text-align:center">
-            <span style="font-family:var(--font-vt);font-size:20px;color:var(--blue)">{{ g.total }}</span>
-          </td>
-          <td style="text-align:center;color:var(--b-soft)">{{ g.iniciado }}</td>
-          <td style="text-align:center">
-            {% if g.em_andamento > 0 %}
-              <span style="color:var(--green)">{{ g.em_andamento }}</span>
-            {% else %}—{% endif %}
-          </td>
-          <td style="text-align:center">
-            {% if g.pausado > 0 %}
-              <span style="color:var(--yellow)">{{ g.pausado }}</span>
-            {% else %}—{% endif %}
-          </td>
-          <td style="text-align:center">
-            {% if g.concluido > 0 %}
-              <span style="color:var(--green)">{{ g.concluido }}</span>
-            {% else %}
-              <span style="color:var(--gray)">0</span>
-            {% endif %}
-          </td>
-          <td style="text-align:center">
-            {% if g.avg_bdays is not none %}
-              <span style="color:{% if g.avg_bdays <= 4 %}var(--green){% elif g.avg_bdays <= 6 %}var(--yellow){% else %}var(--red){% endif %};font-family:var(--font-vt);font-size:18px">
-                {{ g.avg_bdays }}
-              </span>
-              <span style="font-size:9px;color:var(--gray2)"> d.u.</span>
-            {% else %}
-              <span style="color:var(--gray2);font-size:10px">sem finalizadas</span>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+<!-- Histórico -->
+<div style="margin-bottom:10px">
+  <span class="section-title" style="color:{{ col }}">◆ {{ label }} — HISTÓRICO COMPLETO</span>
+</div>
 
-  <!-- ── Todas as produções ───────────────────────────── -->
-  <div style="margin-bottom:10px">
-    <span class="section-title red">◆ TODAS AS PRODUÇÕES — HISTÓRICO COMPLETO</span>
-  </div>
-
+  {% set ts_items = types_summ[tab]['items'] %}
+  {% if ts_items %}
   <div class="table-wrap">
     <table class="pixel-table">
       <thead>
         <tr>
           <th>PRODUTOR</th>
           <th>TÍTULO</th>
-          <th style="text-align:center">ARCOS</th>
           <th style="text-align:center">STATUS</th>
           <th style="text-align:center">INÍCIO</th>
+          <th style="text-align:center">FIM</th>
+          {% if tab == 'producao' %}
+          <th style="text-align:center">ARCOS</th>
+          {% endif %}
           <th style="text-align:center">DURAÇÃO</th>
-          <th style="text-align:center">PRAZO</th>
         </tr>
       </thead>
       <tbody>
-        {% for p in all_prods | sort(attribute='started_at', reverse=True) %}
-          {% set sc = {
-            'iniciado':    'var(--blue)',
-            'em_andamento':'var(--green)',
-            'pausado':     'var(--yellow)',
-            'concluido':   'var(--gray2)'
-          }[p.status] %}
-          {% set sl = {
-            'iniciado':    'INICIADO',
-            'em_andamento':'EM ANDAMENTO',
-            'pausado':     'PAUSADO',
-            'concluido':   'CONCLUÍDO'
-          }[p.status] %}
-          {% set bdays = p.duration_bdays %}
-          {% set deadline_ok = p.status == 'concluido' or bdays <= 4 %}
-        <tr style="{% if p.status == 'concluido' %}background:rgba(0,230,118,.03){% elif bdays > 4 %}background:rgba(255,23,68,.04){% endif %}">
-          <td style="color:var(--white)">{{ p.producer }}</td>
-          <td>
-            <a href="/productions/{{ p.id }}" style="color:var(--b-soft);text-decoration:none;font-size:11px">
-              {{ p.title }}
-            </a>
-          </td>
-          <td style="text-align:center;font-size:11px">
-            <span style="color:{% if p.arcs_done_count == p.total_arcs %}var(--green){% else %}var(--white){% endif %}">
-              {{ p.arcs_done_count }}/{{ p.total_arcs }}
-            </span>
-          </td>
+        {% set sl = {'iniciado':'INICIADO','em_andamento':'EM ANDAMENTO','pausado':'PAUSADO','concluido':'CONCLUÍDO'} %}
+        {% set sc = {'iniciado':'var(--blue)','em_andamento':'var(--green)','pausado':'var(--yellow)','concluido':'var(--gray2)'} %}
+        {% for p in ts_items | sort(attribute='started_at', reverse=True) %}
+        <tr style="{% if p.status=='concluido' %}background:rgba(0,230,118,.03){% elif p.status=='pausado' %}background:rgba(255,215,0,.03){% endif %}">
+          <td>{{ p.producer }}</td>
+          <td style="color:var(--white)">{{ p.title[:30] }}</td>
           <td style="text-align:center">
-            <span style="font-size:9px;color:{{ sc }};border:1px solid {{ sc }};padding:2px 8px;white-space:nowrap">
-              {{ sl }}
-            </span>
+            <span style="font-size:9px;color:{{ sc[p.status] }};border:1px solid {{ sc[p.status] }};padding:2px 6px">{{ sl[p.status] }}</span>
           </td>
-          <td style="text-align:center;font-size:10px;color:var(--gray2)">
-            {{ p.started_at[:10] }}
+          <td style="text-align:center;font-size:10px;color:var(--gray2)">{{ p.started_at[:10] }} {{ p.started_at[11:16] }}</td>
+          <td style="text-align:center;font-size:10px;color:{% if p.completed_at %}var(--green){% else %}var(--gray2){% endif %}">
+            {% if p.completed_at %}{{ p.completed_at[:10] }} {{ p.completed_at[11:16] }}{% else %}—{% endif %}
           </td>
-          <td style="text-align:center">
-            <span style="font-family:var(--font-vt);font-size:18px;
-                         color:{% if bdays <= 4 %}var(--green){% elif bdays <= 6 %}var(--yellow){% else %}var(--red){% endif %}">
-              {{ bdays }}
-            </span>
-            <span style="font-size:9px;color:var(--gray2)"> d.u.</span>
-          </td>
-          <td style="text-align:center">
-            {% if p.status == 'concluido' %}
-              <span style="color:var(--green);font-size:10px">✔ NO PRAZO</span>
-            {% elif bdays <= 4 %}
-              <span style="color:var(--green);font-size:10px">{{ 4 - bdays }}d restantes</span>
-            {% else %}
-              <span style="color:var(--red);font-size:10px">⚠ +{{ bdays - 4 }}d atraso</span>
-            {% endif %}
-          </td>
+          {% if tab == 'producao' %}
+          <td style="text-align:center;color:var(--white)">{{ p.arcs_done_count }}/{{ p.total_arcs }}</td>
+          {% endif %}
+          <td style="text-align:center;color:{{ col }};font-weight:bold">{{ p.duration_label }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-
-  <!-- Summary bar -->
-  <div class="summary-bar" style="border-top-color:var(--blue)">
-    <div>
-      <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">◆ TOTAL DE PRODUÇÕES</div>
-      <span class="summary-val" style="color:var(--blue)">{{ all_prods|length }}</span>
-    </div>
-    <div>
-      <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">◆ FINALIZADAS</div>
-      <span class="summary-val" style="color:var(--green)">
-        {{ all_prods | selectattr('status','equalto','concluido') | list | length }}
-      </span>
-    </div>
-    <div>
-      <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">◆ EM ANDAMENTO</div>
-      <span class="summary-val" style="color:var(--yellow)">
-        {{ all_prods | selectattr('status','equalto','em_andamento') | list | length }}
-      </span>
-    </div>
-    <div>
-      <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">◆ ATRASADAS</div>
-      {% set atrasadas = all_prods | rejectattr('status','equalto','concluido') | selectattr('duration_bdays', 'gt', 4) | list | length %}
-      <span class="summary-val" style="color:{% if atrasadas > 0 %}var(--red){% else %}var(--green){% endif %}">
-        {{ atrasadas }}
-      </span>
-    </div>
-  </div>
-
   {% else %}
-  <div class="empty-state">⚠ Nenhuma produção cadastrada ainda.</div>
+  <div class="empty-state">Nenhuma {{ label|lower }} registrada ainda.</div>
   {% endif %}
 
 {% elif tab == 'shorts' %}
