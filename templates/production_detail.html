@@ -1,232 +1,220 @@
 {% extends "base.html" %}
 {% block title %}{{ prod.title }}{% endblock %}
-{% block header_icon %}<span style="color:var(--red)">▶</span>{% endblock %}
-{% block header_title %}<span style="color:var(--red)">{{ prod.title }}</span>{% endblock %}
+
+{% set TYPE_CFG = {
+  'producao':  ('▶',  'var(--red)',    'Produção'),
+  'roteiro':   ('📝', '#bf5af2',       'Roteiro'),
+  'decupagem': ('✂️', 'var(--cyan)',   'Decupagem'),
+  'edicao':    ('🎬', 'var(--green)',  'Edição'),
+} %}
+{% set pt = prod.prod_type or 'producao' %}
+{% set t_icon, t_col, t_label = TYPE_CFG.get(pt, TYPE_CFG['producao']) %}
+
+{% block header_icon %}<span style="color:{{ t_col }}">{{ t_icon }}</span>{% endblock %}
+{% block header_title %}<span style="color:var(--text-primary)">{{ prod.title }}</span>{% endblock %}
 
 {% block content %}
 
 {% set sc = prod.dl_color %}
 {% set sc_var = 'var(--green)' if sc=='green' else 'var(--yellow)' if sc=='yellow' else 'var(--red)' %}
-{% set status_labels = {'iniciado':'INICIADO','em_andamento':'EM ANDAMENTO','pausado':'PAUSADO','concluido':'CONCLUÍDO'} %}
-{% set status_colors = {'iniciado':'var(--blue)','em_andamento':'var(--green)','pausado':'var(--yellow)','concluido':'var(--gray2)'} %}
+{% set sl = {'iniciado':'Iniciado','em_andamento':'Em Andamento','pausado':'Pausado','concluido':'Concluído'} %}
+{% set sc2 = {'iniciado':'var(--blue)','em_andamento':'var(--green)','pausado':'var(--yellow)','concluido':'var(--gray2)'} %}
 
-<!-- ── Top info bar ───────────────────────────────────────── -->
-<div style="background:var(--panel);border:1px solid var(--border2);
-            padding:14px 18px;margin-bottom:20px;
+<!-- ── Top info bar ─────────────────────────────────── -->
+<div style="background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:14px;
+            padding:16px 20px;margin-bottom:20px;
             display:flex;flex-wrap:wrap;gap:20px;align-items:center">
 
   <div>
-    <div style="font-size:9px;color:var(--gray2);margin-bottom:3px;letter-spacing:1px">PRODUTOR</div>
-    <div style="font-size:13px;color:var(--white);font-weight:bold">{{ prod.producer }}</div>
+    <div style="font-size:10px;color:var(--text-tertiary);margin-bottom:3px;font-weight:500">Produtor</div>
+    <div style="font-size:14px;color:var(--text-primary);font-weight:600">{{ prod.producer }}</div>
   </div>
 
-  <div style="width:1px;height:36px;background:var(--border2)"></div>
+  <div style="width:1px;height:32px;background:var(--border)"></div>
 
   <div>
-    <div style="font-size:9px;color:var(--gray2);margin-bottom:3px;letter-spacing:1px">STATUS</div>
-    <span style="font-size:11px;color:{{ status_colors[prod.status] }};
-                 border:1px solid {{ status_colors[prod.status] }};padding:3px 12px">
-      {{ status_labels[prod.status] }}
+    <div style="font-size:10px;color:var(--text-tertiary);margin-bottom:4px;font-weight:500">Status</div>
+    <span style="font-size:11px;color:{{ sc2[prod.status] }};
+                 background:{{ sc2[prod.status] }}22;
+                 border-radius:20px;padding:3px 12px;font-weight:600">
+      {{ sl[prod.status] }}
     </span>
   </div>
 
-  <div style="width:1px;height:36px;background:var(--border2)"></div>
+  <div style="width:1px;height:32px;background:var(--border)"></div>
 
   <div>
-    <div style="font-size:9px;color:var(--gray2);margin-bottom:3px;letter-spacing:1px">INÍCIO</div>
-    <div style="font-size:12px;color:var(--white)">{{ prod.started_at[:10] }}</div>
+    <div style="font-size:10px;color:var(--text-tertiary);margin-bottom:3px;font-weight:500">Início</div>
+    <div style="font-size:13px;color:var(--text-primary)">{{ prod.started_at[:10] }}</div>
   </div>
 
   {% if prod.status == 'concluido' and prod.completed_at %}
-  <div style="width:1px;height:36px;background:var(--border2)"></div>
+  <div style="width:1px;height:32px;background:var(--border)"></div>
   <div>
-    <div style="font-size:9px;color:var(--gray2);margin-bottom:3px;letter-spacing:1px">CONCLUSÃO</div>
-    <div style="font-size:12px;color:var(--green)">{{ prod.completed_at[:10] }}</div>
+    <div style="font-size:10px;color:var(--text-tertiary);margin-bottom:3px;font-weight:500">Concluído</div>
+    <div style="font-size:13px;color:var(--green)">{{ prod.completed_at[:10] }}</div>
   </div>
   {% endif %}
 
-  <div style="width:1px;height:36px;background:var(--border2)"></div>
+  <div style="width:1px;height:32px;background:var(--border)"></div>
 
   <div>
-    <div style="font-size:9px;color:var(--gray2);margin-bottom:3px;letter-spacing:1px">
-      {% if prod.status=='concluido' %}DURAÇÃO{% else %}DIAS EM CURSO{% endif %}
+    <div style="font-size:10px;color:var(--text-tertiary);margin-bottom:3px;font-weight:500">
+      {% if pt == 'producao' %}Dias em curso{% else %}Duração{% endif %}
     </div>
+    {% if pt == 'producao' %}
     <div style="display:flex;align-items:baseline;gap:4px">
-      <span style="font-family:var(--font-vt);font-size:32px;color:{{ sc_var }};line-height:1">
-        {{ prod.duration_bdays }}
-      </span>
-      <span style="font-size:10px;color:var(--gray2)">dias úteis</span>
+      <span style="font-size:28px;font-weight:300;color:{{ sc_var }};line-height:1;letter-spacing:-1px">{{ prod.duration_bdays }}</span>
+      <span style="font-size:11px;color:var(--text-tertiary)">d.u.</span>
     </div>
+    {% else %}
+    <div style="font-size:16px;font-weight:500;color:{{ t_col }}">{{ prod.duration_label }}</div>
+    {% endif %}
   </div>
 
-  <!-- Action buttons -->
+  <!-- Actions -->
   <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
     {% if prod.status not in ('em_andamento','iniciado') %}
-      <form method="POST" action="/productions/{{ prod.id }}/status" style="margin:0">
-        <input type="hidden" name="status" value="em_andamento"/>
-        <button type="submit" class="action-btn green-btn" style="font-size:10px;padding:7px 16px">▶ RETOMAR</button>
-      </form>
+    <form method="POST" action="/productions/{{ prod.id }}/status" style="margin:0">
+      <input type="hidden" name="status" value="em_andamento"/>
+      <button type="submit" class="action-btn green-btn" style="font-size:12px;padding:7px 16px">▶ Retomar</button>
+    </form>
     {% endif %}
     {% if prod.status not in ('pausado','concluido') %}
-      <form method="POST" action="/productions/{{ prod.id }}/status" style="margin:0">
-        <input type="hidden" name="status" value="pausado"/>
-        <button type="submit" class="action-btn" style="font-size:10px;padding:7px 16px;border-color:var(--yellow);color:var(--yellow)">⏸ PAUSAR</button>
-      </form>
+    <form method="POST" action="/productions/{{ prod.id }}/status" style="margin:0">
+      <input type="hidden" name="status" value="pausado"/>
+      <button type="submit" class="action-btn" style="font-size:12px;padding:7px 16px;border-color:rgba(255,214,10,0.3);color:var(--yellow);background:rgba(255,214,10,0.08)">⏸ Pausar</button>
+    </form>
     {% endif %}
     {% if prod.status != 'concluido' %}
-      <form method="POST" action="/productions/{{ prod.id }}/status" style="margin:0">
-        <input type="hidden" name="status" value="concluido"/>
-        <button type="submit" class="action-btn" style="font-size:10px;padding:7px 16px;border-color:var(--gray);color:var(--gray2)">✔ CONCLUIR</button>
-      </form>
+    <form method="POST" action="/productions/{{ prod.id }}/status" style="margin:0">
+      <input type="hidden" name="status" value="concluido"/>
+      <button type="submit" class="action-btn gray-btn" style="font-size:12px;padding:7px 16px">✔ Concluir</button>
+    </form>
     {% endif %}
     {% if is_admin %}
-      <form method="POST" action="/productions/{{ prod.id }}/delete" style="margin:0"
-            onsubmit="return confirm('Deletar esta produção?')">
-        <button type="submit" class="action-btn" style="font-size:10px;padding:7px 16px;border-color:var(--r-dark);color:var(--r-dark)">✕</button>
-      </form>
+    <form method="POST" action="/productions/{{ prod.id }}/delete" style="margin:0"
+          onsubmit="return confirm('Deletar esta produção?')">
+      <button type="submit" class="action-btn" style="font-size:12px;padding:7px 14px;border-color:rgba(255,69,58,0.3);color:var(--red);background:rgba(255,69,58,0.08)">✕</button>
+    </form>
     {% endif %}
   </div>
-
 </div>
 
 
-<!-- ── Main grid: checklist + countdown ──────────────────── -->
+{% if pt == 'producao' %}
+<!-- ══════════════ PRODUÇÃO ══════════════════════════════ -->
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
 
-  <!-- LEFT: Arc checklist -->
+  <!-- Checklist -->
   <div>
-    <div style="margin-bottom:10px"><span class="section-title red">◆ CHECKLIST DE ARCOS</span></div>
+    <div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Checklist de Arcos</div>
 
-    <!-- Arc progress bar -->
-    <div style="background:var(--card);border:1px solid var(--border2);padding:14px 16px;margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-        <span style="font-size:10px;color:var(--gray2);letter-spacing:1px">PROGRESSO</span>
-        <span style="font-family:var(--font-vt);font-size:20px;color:{{ sc_var }}">
-          {{ prod.arcs_done_count }}/{{ prod.total_arcs }}
-        </span>
+    <!-- Progress -->
+    <div style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+        <span style="font-size:12px;color:var(--text-secondary)">Progresso</span>
+        <span style="font-size:18px;font-weight:300;color:{{ sc_var }};letter-spacing:-0.5px">{{ prod.arcs_done_count }}/{{ prod.total_arcs }}</span>
       </div>
-      <div style="background:var(--card2);height:14px;border:1px solid var(--border2)">
-        <div style="height:100%;background:{{ sc_var }};width:{{ prod.arc_pct }}%;transition:width .4s"></div>
+      <div style="background:rgba(255,255,255,0.07);height:6px;border-radius:3px;overflow:hidden">
+        <div style="height:100%;background:{{ sc_var }};width:{{ prod.arc_pct }}%;border-radius:3px;transition:width .4s"></div>
       </div>
-      <div style="display:flex;justify-content:space-between;margin-top:6px">
-        <span style="font-size:9px;color:var(--gray2)">
-          {{ prod.total_arcs - prod.arcs_done_count }} arco(s) restante(s)
-        </span>
-        <span style="font-size:9px;color:{{ sc_var }}">{{ prod.arc_pct }}%</span>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--text-tertiary)">
+        <span>{{ prod.total_arcs - prod.arcs_done_count }} restante(s)</span>
+        <span style="color:{{ sc_var }}">{{ prod.arc_pct }}%</span>
       </div>
     </div>
 
     <!-- Arc list -->
-    <div style="background:var(--card);border:1px solid var(--border2)" id="arc-list">
+    <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:14px;overflow:hidden" id="arc-list">
       {% for i in range(1, prod.total_arcs + 1) %}
-        {% set done = i in prod.arcs_done_list %}
-        <div style="display:flex;align-items:center;
-                    padding:11px 14px;
-                    border-bottom:{% if not loop.last %}1px solid var(--border){% else %}none{% endif %};
-                    background:{% if done %}rgba(0,230,118,.04){% else %}transparent{% endif %}"
-             data-arc="{{ i }}" data-done="{{ 'true' if done else 'false' }}">
-          <form method="POST" action="/productions/{{ prod.id }}/arc"
-                style="margin:0;display:flex;align-items:center;width:100%;gap:12px">
-            <input type="hidden" name="arc" value="{{ i }}"/>
-            <input type="hidden" name="action" value="{% if done %}uncheck{% else %}check{% endif %}"/>
-            <button type="submit"
-                    style="background:none;
-                           border:2px solid {% if done %}var(--green){% else %}var(--border2){% endif %};
-                           width:24px;height:24px;cursor:pointer;
-                           color:{% if done %}var(--green){% else %}transparent{% endif %};
-                           font-size:14px;flex-shrink:0;
-                           display:flex;align-items:center;justify-content:center">
-              {% if done %}✔{% endif %}
-            </button>
-            <span style="font-size:12px;flex:1;
-                         color:{% if done %}var(--green){% else %}var(--white){% endif %};
-                         {% if done %}opacity:.7{% endif %}">
-              ARCO {{ i }}
-            </span>
-            <span class="arc-chars-badge" data-arc="{{ i }}"
-                  style="font-size:9px;
-                         {% if prod.arc_chars_map.get(i) %}
-                           color:{% if prod.arc_chars_map.get(i, 0) >= 5000 %}var(--green){% elif prod.arc_chars_map.get(i, 0) >= 3000 %}var(--yellow){% else %}var(--red){% endif %};
-                         {% else %}
-                           color:var(--gray2);display:none;
-                         {% endif %}">
-              {% if prod.arc_chars_map.get(i) %}{{ "{:,}".format(prod.arc_chars_map.get(i)).replace(",",".") }} ch{% endif %}
-            </span>
-            <span style="font-size:9px;letter-spacing:1px;
-                         color:{% if done %}var(--g-dark){% else %}var(--gray){% endif %}">
-              {% if done %}✔ GRAVADO{% else %}PENDENTE{% endif %}
-            </span>
-          </form>
-        </div>
+      {% set done = i in prod.arcs_done_list %}
+      <div style="display:flex;align-items:center;padding:11px 16px;
+                  border-bottom:{% if not loop.last %}1px solid var(--border){% else %}none{% endif %};
+                  background:{% if done %}rgba(48,209,88,0.04){% else %}transparent{% endif %}"
+           data-arc="{{ i }}" data-done="{{ 'true' if done else 'false' }}">
+        <form method="POST" action="/productions/{{ prod.id }}/arc"
+              style="margin:0;display:flex;align-items:center;width:100%;gap:12px">
+          <input type="hidden" name="arc" value="{{ i }}"/>
+          <input type="hidden" name="action" value="{% if done %}uncheck{% else %}check{% endif %}"/>
+          <button type="submit" style="
+              background:{% if done %}var(--green){% else %}rgba(255,255,255,0.06){% endif %};
+              border:1px solid {% if done %}var(--green){% else %}rgba(255,255,255,0.15){% endif %};
+              border-radius:50%;width:22px;height:22px;cursor:pointer;
+              color:{% if done %}#000{% else %}transparent{% endif %};
+              font-size:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+            {% if done %}✔{% endif %}
+          </button>
+          <span style="font-size:13px;flex:1;font-weight:500;
+                       color:{% if done %}var(--green){% else %}var(--text-primary){% endif %};
+                       {% if done %}opacity:.6{% endif %}">
+            Arco {{ i }}
+          </span>
+          <span class="arc-chars-badge" data-arc="{{ i }}"
+                style="font-size:11px;display:none;color:var(--text-tertiary)">
+            {% if prod.arc_chars_map.get(i) %}{{ "{:,}".format(prod.arc_chars_map.get(i)).replace(",",".") }} ch{% endif %}
+          </span>
+          <span style="font-size:11px;color:{% if done %}var(--green){% else %}var(--text-tertiary){% endif %}">
+            {% if done %}✔ Gravado{% else %}Pendente{% endif %}
+          </span>
+        </form>
+      </div>
       {% endfor %}
     </div>
 
-    <!-- Chars-per-arc progress (only shown after analysis) -->
+    <!-- Chars progress (from analysis) -->
     <div id="arc-chars-progress" style="display:none;margin-top:12px;
-         background:var(--card);border:2px solid #bb44ff">
-      <div style="background:#1a0a2e;padding:8px 14px;font-size:9px;
-                  color:#bb44ff;letter-spacing:1px;border-bottom:1px solid #bb44ff33">
-        ◆ PROGRESSO DO ROTEIRO — BASEADO NA ANÁLISE
+         background:rgba(191,90,242,0.08);border:1px solid rgba(191,90,242,0.25);border-radius:14px">
+      <div style="padding:10px 16px 8px;font-size:11px;font-weight:600;color:#bf5af2;text-transform:uppercase;letter-spacing:0.4px;border-bottom:1px solid rgba(191,90,242,0.12)">
+        Progresso do Roteiro — Baseado na Análise
       </div>
       <div style="padding:12px 16px">
-        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-          <span style="font-size:10px;color:var(--gray2)">CARACTERES GRAVADOS</span>
-          <span id="arc-chars-label" style="font-size:11px;color:#bb44ff"></span>
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:12px">
+          <span style="color:var(--text-secondary)">Chars gravados</span>
+          <span id="arc-chars-label" style="color:#bf5af2;font-weight:600"></span>
         </div>
-        <div style="background:var(--card2);height:12px;border:1px solid var(--border2);margin-bottom:8px">
-          <div id="arc-chars-bar" style="height:100%;background:#bb44ff;width:0%;transition:width .4s"></div>
+        <div style="background:rgba(255,255,255,0.07);height:6px;border-radius:3px;overflow:hidden;margin-bottom:8px">
+          <div id="arc-chars-bar" style="height:100%;background:#bf5af2;width:0%;border-radius:3px;transition:width .4s"></div>
         </div>
-        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--gray2)">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-tertiary)">
           <span id="arc-chars-detail"></span>
-          <span id="arc-chars-pct" style="color:#bb44ff;font-family:var(--font-vt);font-size:16px"></span>
+          <span id="arc-chars-pct" style="color:#bf5af2;font-size:16px;font-weight:300"></span>
         </div>
       </div>
     </div>
-
   </div>
 
-
-  <!-- RIGHT: Countdown + Timing -->
+  <!-- Countdown + Info -->
   <div>
-    <div style="margin-bottom:10px"><span class="section-title blue">◆ CONTAGEM REGRESSIVA</span></div>
+    <div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Contagem Regressiva</div>
 
-    <!-- Big countdown number -->
-    <div style="background:var(--card);border:2px solid {{ sc_var }};padding:24px 20px;
-                text-align:center;margin-bottom:14px;box-shadow:4px 4px 0 rgba(0,0,0,.4)">
-
+    <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);border-radius:18px;padding:28px 20px;
+                text-align:center;margin-bottom:14px">
       {% set restantes = prod.total_arcs - prod.arcs_done_count %}
       {% if restantes == 0 %}
-        <div style="font-size:28px;color:var(--green);margin-bottom:6px">✔</div>
-        <div style="font-family:var(--font-vt);font-size:52px;color:var(--green);line-height:1">PRONTO</div>
-        <div style="font-size:11px;color:var(--green);margin-top:6px">todos os arcos gravados!</div>
+        <div style="font-size:36px;margin-bottom:8px">✅</div>
+        <div style="font-size:42px;font-weight:300;color:var(--green);letter-spacing:-2px">Pronto</div>
+        <div style="font-size:13px;color:var(--text-tertiary);margin-top:6px">todos os arcos gravados</div>
       {% else %}
-        <div style="font-size:9px;color:var(--gray2);letter-spacing:2px;margin-bottom:6px">ARCOS RESTANTES</div>
-        <div style="font-family:var(--font-vt);font-size:88px;color:{{ sc_var }};line-height:1">
-          {{ restantes }}
-        </div>
-        <div style="font-size:11px;color:var(--gray2);margin-top:8px">
-          de {{ prod.total_arcs }} arcos no total
-        </div>
+        <div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Arcos Restantes</div>
+        <div style="font-size:80px;font-weight:200;color:{{ sc_var }};line-height:1;letter-spacing:-4px">{{ restantes }}</div>
+        <div style="font-size:13px;color:var(--text-tertiary);margin-top:8px">de {{ prod.total_arcs }} arcos</div>
         {% if prod.arcs_done_count > 0 %}
-          <div style="margin-top:14px;font-size:10px;color:var(--green)">
-            ✔ {{ prod.arcs_done_count }} gravado{% if prod.arcs_done_count > 1 %}s{% endif %}
-          </div>
+        <div style="margin-top:10px;font-size:12px;color:var(--green)">✔ {{ prod.arcs_done_count }} gravado{% if prod.arcs_done_count > 1 %}s{% endif %}</div>
         {% endif %}
       {% endif %}
-
     </div>
 
-    <!-- Next arc to record -->
     {% if restantes > 0 %}
-    <div style="background:var(--card);border:1px solid var(--border2);padding:14px 16px;margin-bottom:14px">
-      <div style="font-size:9px;color:var(--gray2);letter-spacing:1px;margin-bottom:8px">◆ PRÓXIMO A GRAVAR</div>
+    <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:10px">Próximo a Gravar</div>
       {% for i in range(1, prod.total_arcs + 1) %}
         {% if i not in prod.arcs_done_list and loop.first %}
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-family:var(--font-vt);font-size:36px;color:{{ sc_var }}">{{ i }}</span>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:32px;font-weight:200;color:{{ sc_var }};letter-spacing:-1px">{{ i }}</span>
           <div>
-            <div style="font-size:12px;color:var(--white)">ARCO {{ i }}</div>
-            <div style="font-size:9px;color:var(--gray2)">marcar no checklist quando gravar</div>
+            <div style="font-size:14px;font-weight:600;color:var(--text-primary)">Arco {{ i }}</div>
+            <div style="font-size:11px;color:var(--text-tertiary)">marcar após gravar</div>
           </div>
         </div>
         {% endif %}
@@ -234,127 +222,243 @@
     </div>
     {% endif %}
 
-    <!-- Timing info -->
-    <div style="background:var(--card);border:1px solid var(--border2);padding:14px 16px">
-      <div style="font-size:9px;color:var(--gray2);letter-spacing:1px;margin-bottom:10px">◆ TEMPO DE PRODUÇÃO</div>
+    <!-- Timing -->
+    <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+      <div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:10px">Tempo de Produção</div>
       <div style="display:flex;align-items:baseline;gap:6px">
-        <span style="font-family:var(--font-vt);font-size:36px;color:{{ sc_var }}">{{ prod.duration_bdays }}</span>
-        <span style="font-size:10px;color:var(--gray2)">
-          dias úteis {% if prod.status=='concluido' %}(concluído {{ prod.completed_at[:10] }}){% else %}em curso{% endif %}
+        <span style="font-size:32px;font-weight:200;color:{{ sc_var }};letter-spacing:-1px">{{ prod.duration_bdays }}</span>
+        <span style="font-size:12px;color:var(--text-tertiary)">
+          dias úteis {% if prod.status=='concluido' %}(concluído){% else %}em curso{% endif %}
         </span>
       </div>
       {% if prod.status != 'concluido' and prod.bdays <= 4 %}
-        <div style="margin-top:8px;font-size:10px;color:var(--green)">✔ dentro do prazo</div>
+      <div style="margin-top:8px;font-size:12px;color:var(--green)">✔ dentro do prazo</div>
       {% elif prod.status != 'concluido' and prod.bdays > 4 %}
-        <div style="margin-top:8px;font-size:10px;color:var(--red)">⚠ prazo excedido em {{ prod.bdays - 4 }} dia(s)</div>
+      <div style="margin-top:8px;font-size:12px;color:var(--red)">⚠ prazo excedido em {{ prod.bdays - 4 }} dia(s)</div>
       {% endif %}
     </div>
 
     {% if prod.script_chars > 0 %}
-    <!-- Chars from script analysis saved at creation -->
-    {% set meta_dia = (prod.script_chars / 4) | round(0) | int %}
-    <div style="margin-top:14px;background:var(--card);border:2px solid #bb44ff;padding:14px 16px">
-      <div style="font-size:9px;color:#bb44ff;letter-spacing:1px;margin-bottom:10px">◆ ROTEIRO CADASTRADO</div>
-      <div style="display:flex;gap:20px;flex-wrap:wrap">
+    <div style="margin-top:14px;background:rgba(191,90,242,0.07);border:1px solid rgba(191,90,242,0.22);border-radius:14px;padding:16px">
+      {% set meta_dia = (prod.script_chars / 4) | round(0) | int %}
+      <div style="font-size:11px;font-weight:600;color:#bf5af2;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:12px">Roteiro Cadastrado</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
         <div>
-          <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">TOTAL CHARS</div>
-          <span style="font-family:var(--font-vt);font-size:24px;color:#bb44ff">{{ "{:,}".format(prod.script_chars).replace(",",".") }}</span>
+          <div style="font-size:10px;color:var(--text-tertiary);margin-bottom:2px">Total</div>
+          <span style="font-size:22px;font-weight:300;color:#bf5af2;letter-spacing:-0.5px">{{ "{:,}".format(prod.script_chars).replace(",",".") }}</span>
+          <span style="font-size:10px;color:var(--text-tertiary)"> ch</span>
         </div>
         <div>
-          <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">MÉDIA/ARCO</div>
-          <span style="font-family:var(--font-vt);font-size:24px;color:var(--white)">{{ "{:,}".format(prod.arc_chars_avg).replace(",",".") }}</span>
+          <div style="font-size:10px;color:var(--text-tertiary);margin-bottom:2px">Média/Arco</div>
+          <span style="font-size:22px;font-weight:300;color:var(--text-primary);letter-spacing:-0.5px">{{ "{:,}".format(prod.arc_chars_avg).replace(",",".") }}</span>
         </div>
         <div>
-          <div style="font-size:9px;color:var(--gray2);margin-bottom:2px">DURAÇÃO ~</div>
-          <span style="font-family:var(--font-vt);font-size:24px;color:var(--green)">{{ (prod.script_chars / 1000 * 5) | round(0) | int }}</span>
-          <span style="font-size:9px;color:var(--gray2)"> min</span>
-        </div>
-        <div style="border-left:2px solid #bb44ff33;padding-left:20px">
-          <div style="font-size:9px;color:var(--yellow);margin-bottom:2px;letter-spacing:1px">META/DIA <span style="color:var(--gray2)">(÷4 dias)</span></div>
-          <span style="font-family:var(--font-vt);font-size:24px;color:var(--yellow)">{{ "{:,}".format(meta_dia).replace(",",".") }}</span>
-          <span style="font-size:9px;color:var(--gray2)"> chars</span>
-          <div style="font-size:9px;color:var(--gray2);margin-top:2px">~{{ (meta_dia / 1000 * 5) | round(1) }} min/dia</div>
+          <div style="font-size:10px;color:var(--yellow);margin-bottom:2px;font-weight:600">Meta/Dia ÷4</div>
+          <span style="font-size:22px;font-weight:300;color:var(--yellow);letter-spacing:-0.5px">{{ "{:,}".format(meta_dia).replace(",",".") }}</span>
+          <span style="font-size:10px;color:var(--text-tertiary)"> ch</span>
         </div>
       </div>
-      <!-- Progress bar based on arcs done -->
-      <div style="margin-top:12px">
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:9px;color:var(--gray2)">
-          <span>CARACTERES GRAVADOS (est.)</span>
-          <span style="color:#bb44ff">{{ "{:,}".format(prod.arcs_done_count * prod.arc_chars_avg).replace(",",".") }} / {{ "{:,}".format(prod.script_chars).replace(",",".") }}</span>
-        </div>
-        <div style="background:var(--card2);height:8px;border:1px solid var(--border2)">
-          <div style="height:100%;background:#bb44ff;width:{{ prod.arc_pct }}%"></div>
-        </div>
-        <div style="font-size:9px;color:#bb44ff;text-align:right;margin-top:3px">{{ prod.arc_pct }}%</div>
+      <div style="background:rgba(255,255,255,0.07);height:5px;border-radius:3px;margin-top:12px;overflow:hidden">
+        <div style="height:100%;background:#bf5af2;width:{{ prod.arc_pct }}%;border-radius:3px"></div>
       </div>
+      <div style="text-align:right;font-size:11px;color:#bf5af2;margin-top:4px">{{ prod.arc_pct }}%</div>
     </div>
     {% endif %}
 
     {% if prod.notes %}
-    <div style="margin-top:14px;background:var(--card);border:1px solid var(--border2);
-                padding:12px 14px;font-size:11px;color:var(--gray2);line-height:1.6">
-      <div style="font-size:9px;color:var(--gray2);letter-spacing:1px;margin-bottom:6px">◆ OBSERVAÇÕES</div>
+    <div style="margin-top:14px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:14px 16px;font-size:13px;color:var(--text-secondary);line-height:1.6">
+      <div style="font-size:10px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px">Observações</div>
       {{ prod.notes }}
     </div>
     {% endif %}
-
   </div>
 </div>
 
-
-<div style="margin-top:16px">
-  <a href="/productions" class="action-btn gray-btn" style="font-size:11px">← VOLTAR</a>
-</div>
-
-
-<!-- ══ ANALISADOR DE ROTEIRO ═════════════════════════════════ -->
-<div style="margin-top:28px;border-top:2px solid var(--border2);padding-top:20px">
-
-  <div style="margin-bottom:12px;display:flex;align-items:center;gap:12px">
-    <span class="section-title" style="color:#bb44ff">◆ ANALISADOR DE ROTEIRO</span>
-    <span style="font-size:9px;color:var(--gray2);border:1px solid var(--border2);padding:2px 8px">AUXILIAR · NÃO SALVA DADOS</span>
+<!-- Analisador -->
+<div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
+  <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px">
+    <span style="font-size:11px;font-weight:600;color:#bf5af2;text-transform:uppercase;letter-spacing:0.5px">Analisador de Roteiro</span>
+    <span style="font-size:10px;color:var(--text-tertiary);background:rgba(255,255,255,0.06);border-radius:20px;padding:2px 10px">Auxiliar · não salva dados</span>
   </div>
-
-  <div style="background:var(--card);border:2px solid #bb44ff;box-shadow:4px 4px 0 rgba(187,68,255,.2)">
-    <div style="background:#1a0a2e;padding:8px 14px;font-size:10px;
-                color:#bb44ff;font-weight:bold;border-bottom:1px solid #bb44ff22">
-      ◆ &nbsp;COLE O ROTEIRO — DETECTA ARCOS AUTOMATICAMENTE E CONECTA AO CHECKLIST
+  <div style="background:rgba(191,90,242,0.06);border:1px solid rgba(191,90,242,0.20);border-radius:16px;overflow:hidden">
+    <div style="background:rgba(191,90,242,0.10);padding:10px 16px;font-size:12px;font-weight:500;color:#bf5af2;border-bottom:1px solid rgba(191,90,242,0.12)">
+      Cole o roteiro — detecta arcos e conecta ao checklist
     </div>
     <div style="padding:14px 16px">
-      <textarea id="roteiro-input"
-                style="width:100%;min-height:140px;background:var(--card2);
-                       border:1px solid var(--border2);color:var(--white);
-                       font-family:var(--font-pixel);font-size:11px;
-                       padding:10px;resize:vertical;box-sizing:border-box;
-                       outline:none;line-height:1.6"
-                placeholder="Cole o roteiro aqui... (Arco 1, Arco 2... ou [ARCO 1], [ARCO 2]...)"></textarea>
+      <textarea id="roteiro-input" style="width:100%;min-height:120px;background:rgba(255,255,255,0.05);
+                 border:1px solid rgba(255,255,255,0.10);border-radius:10px;color:var(--text-primary);
+                 font-family:var(--font-ui);font-size:13px;padding:10px 14px;resize:vertical;
+                 box-sizing:border-box;outline:none;line-height:1.5"
+                placeholder="Cole o roteiro aqui... (Arco 1, Arco 2... ou [ARCO 1]...)"></textarea>
       <div style="display:flex;gap:10px;margin-top:10px;align-items:center">
-        <button onclick="analisarRoteiro()"
-                style="background:none;border:2px solid #bb44ff;color:#bb44ff;
-                       padding:9px 22px;cursor:pointer;font-family:var(--font-pixel);
-                       font-size:11px;letter-spacing:1px;position:relative">
-          <span style="position:absolute;left:0;top:0;bottom:0;width:5px;background:#bb44ff"></span>
-          ◆ ANALISAR ROTEIRO
+        <button onclick="analisarRoteiro()" style="background:rgba(191,90,242,0.15);border:1px solid rgba(191,90,242,0.35);color:#bf5af2;
+               padding:8px 20px;cursor:pointer;font-family:var(--font-ui);font-size:13px;font-weight:500;border-radius:8px">
+          Analisar
         </button>
-        <button onclick="limparAnalise()"
-                style="background:none;border:1px solid var(--border2);color:var(--gray2);
-                       padding:9px 16px;cursor:pointer;font-family:var(--font-pixel);font-size:10px">
-          ✕ LIMPAR
+        <button onclick="limparAnalise()" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);color:var(--text-secondary);
+               padding:8px 16px;cursor:pointer;font-family:var(--font-ui);font-size:13px;border-radius:8px">
+          Limpar
         </button>
-        <span id="roteiro-chars" style="font-size:10px;color:var(--gray2);margin-left:auto"></span>
+        <span id="roteiro-chars" style="font-size:11px;color:var(--text-tertiary);margin-left:auto"></span>
       </div>
     </div>
-    <div id="roteiro-resultado" style="display:none;border-top:1px solid var(--border2)">
-      <div id="roteiro-summary" style="background:#1a0a2e;padding:10px 16px;display:flex;gap:24px;flex-wrap:wrap;font-size:10px"></div>
+    <div id="roteiro-resultado" style="display:none;border-top:1px solid rgba(191,90,242,0.10)">
+      <div id="roteiro-summary" style="background:rgba(191,90,242,0.07);padding:10px 16px;display:flex;gap:20px;flex-wrap:wrap;font-size:12px"></div>
       <div id="roteiro-arcos" style="padding:14px 16px"></div>
     </div>
-    <div id="roteiro-erro" style="display:none;padding:12px 16px;font-size:11px;color:var(--red);border-top:1px solid var(--border2)"></div>
+    <div id="roteiro-erro" style="display:none;padding:12px 16px;font-size:13px;color:var(--red);border-top:1px solid rgba(255,69,58,0.15)"></div>
   </div>
+</div>
+
+
+{% else %}
+<!-- ══════════════ ROTEIRO / DECUPAGEM / EDIÇÃO ═══════════ -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+
+  <!-- Left: Arc list with manual chars -->
+  <div>
+    <div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Arcos</div>
+
+    <!-- Arc progress -->
+    <div style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:12px;color:var(--text-secondary)">Progresso</span>
+        <span style="font-size:18px;font-weight:300;color:{{ t_col }};letter-spacing:-0.5px">{{ prod.arcs_done_count }}/{{ prod.total_arcs }}</span>
+      </div>
+      <div style="background:rgba(255,255,255,0.07);height:6px;border-radius:3px;overflow:hidden">
+        <div style="height:100%;background:{{ t_col }};width:{{ prod.arc_pct }}%;border-radius:3px;transition:width .4s"></div>
+      </div>
+    </div>
+
+    <!-- Arc list with inline char input -->
+    <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+      {% for i in range(1, prod.total_arcs + 1) %}
+      {% set done = i in prod.arcs_done_list %}
+      {% set arc_chars = prod.arc_chars_map.get(i, 0) %}
+      <div style="border-bottom:{% if not loop.last %}1px solid var(--border){% else %}none{% endif %};
+                  background:{% if done %}rgba(48,209,88,0.04){% else %}transparent{% endif %}">
+        <!-- Arc header row -->
+        <div style="display:flex;align-items:center;padding:10px 16px;gap:10px">
+          <form method="POST" action="/productions/{{ prod.id }}/arc" style="margin:0;display:flex;align-items:center;gap:10px;flex:1">
+            <input type="hidden" name="arc" value="{{ i }}"/>
+            <input type="hidden" name="action" value="{% if done %}uncheck{% else %}check{% endif %}"/>
+            <button type="submit" style="
+                background:{% if done %}{{ t_col }}{% else %}rgba(255,255,255,0.06){% endif %};
+                border:1px solid {% if done %}{{ t_col }}{% else %}rgba(255,255,255,0.15){% endif %};
+                border-radius:50%;width:22px;height:22px;cursor:pointer;
+                color:{% if done %}#000{% else %}transparent{% endif %};
+                font-size:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+              {% if done %}✔{% endif %}
+            </button>
+            <span style="font-size:13px;font-weight:500;flex:1;
+                         color:{% if done %}{{ t_col }}{% else %}var(--text-primary){% endif %};
+                         {% if done %}opacity:.65{% endif %}">
+              Arco {{ i }}
+            </span>
+          </form>
+          {% if arc_chars > 0 %}
+          <span style="font-size:12px;font-weight:600;color:{{ t_col }}">{{ "{:,}".format(arc_chars).replace(",",".") }} ch</span>
+          {% endif %}
+          <button onclick="toggleCharInput({{ i }})" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);
+                  color:var(--text-tertiary);border-radius:8px;padding:4px 10px;cursor:pointer;font-family:var(--font-ui);font-size:11px">
+            {% if arc_chars > 0 %}Editar{% else %}+ Chars{% endif %}
+          </button>
+        </div>
+        <!-- Inline char input (hidden by default) -->
+        <div id="char-input-{{ i }}" style="display:none;padding:0 16px 12px">
+          <form method="POST" action="/productions/{{ prod.id }}/arc_chars" style="margin:0;display:flex;gap:8px;align-items:center">
+            <input type="hidden" name="arc" value="{{ i }}"/>
+            <input type="number" name="chars" value="{{ arc_chars }}"
+                   min="0" placeholder="0"
+                   style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);border-radius:8px;
+                          color:var(--text-primary);font-family:var(--font-ui);font-size:13px;
+                          padding:7px 12px;width:140px;outline:none;"/>
+            <span style="font-size:12px;color:var(--text-tertiary)">chars escritos</span>
+            <button type="submit" style="background:{{ t_col }}22;border:1px solid {{ t_col }}55;color:{{ t_col }};
+                    border-radius:8px;padding:7px 14px;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500">
+              Salvar
+            </button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Chars summary -->
+    {% if prod.script_chars > 0 %}
+    {% set meta_dia = (prod.script_chars / 4) | round(0) | int %}
+    <div style="margin-top:12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:14px;padding:16px">
+      <div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:12px">Progresso de Escrita</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+        <div>
+          <div style="font-size:10px;color:var(--text-tertiary);margin-bottom:2px">Total escrito</div>
+          <span style="font-size:22px;font-weight:300;color:{{ t_col }};letter-spacing:-0.5px">{{ "{:,}".format(prod.script_chars).replace(",",".") }}</span>
+          <span style="font-size:10px;color:var(--text-tertiary)"> ch</span>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--yellow);margin-bottom:2px;font-weight:600">Meta/Dia ÷4</div>
+          <span style="font-size:22px;font-weight:300;color:var(--yellow);letter-spacing:-0.5px">{{ "{:,}".format(meta_dia).replace(",",".") }}</span>
+          <span style="font-size:10px;color:var(--text-tertiary)"> ch</span>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--text-tertiary);margin-bottom:2px">Média/Arco</div>
+          <span style="font-size:22px;font-weight:300;color:var(--text-primary);letter-spacing:-0.5px">{{ "{:,}".format(prod.arc_chars_avg).replace(",",".") }}</span>
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,0.07);height:6px;border-radius:3px;overflow:hidden">
+        <div style="height:100%;background:{{ t_col }};width:{{ prod.arc_pct }}%;border-radius:3px"></div>
+      </div>
+      <div style="text-align:right;font-size:11px;color:{{ t_col }};margin-top:4px">{{ prod.arc_pct }}%</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Right: Time tracking -->
+  <div>
+    <div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Tempo</div>
+
+    <!-- Big timer -->
+    <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);border-radius:18px;padding:28px 20px;text-align:center;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">
+        {% if prod.status == 'concluido' %}Tempo total{% else %}Em andamento{% endif %}
+      </div>
+      <div style="font-size:52px;font-weight:200;color:{{ t_col }};letter-spacing:-2px;line-height:1">
+        {{ prod.duration_label }}
+      </div>
+      {% if prod.status != 'concluido' %}
+      <div style="font-size:12px;color:var(--text-tertiary);margin-top:8px">
+        {% if prod.status == 'pausado' %}⏸ pausado{% else %}⏱ em andamento{% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Notes -->
+    {% if prod.notes %}
+    <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:14px 16px;font-size:13px;color:var(--text-secondary);line-height:1.6">
+      <div style="font-size:10px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px">Observações</div>
+      {{ prod.notes }}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endif %}
+
+<div style="margin-top:16px">
+  <a href="/productions" class="action-btn gray-btn" style="font-size:12px">← Voltar</a>
 </div>
 
 
 <script>
 (function() {
+  // Toggle char input panel
+  window.toggleCharInput = function(arcNum) {
+    var el = document.getElementById('char-input-' + arcNum);
+    if (!el) return;
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  };
+
+  // Arc chars progress (for producao)
   var PROD_ID   = '{{ prod.id }}';
   var STORE_KEY = 'arc_chars_' + PROD_ID;
   var arcCharsMap = {};
@@ -363,174 +467,118 @@
     try { sessionStorage.setItem(STORE_KEY, JSON.stringify(map)); } catch(e) {}
     arcCharsMap = map;
   }
-
   function loadArcChars() {
-    try {
-      var raw = sessionStorage.getItem(STORE_KEY);
-      if (raw) { arcCharsMap = JSON.parse(raw); return true; }
-    } catch(e) {}
+    try { var r = sessionStorage.getItem(STORE_KEY); if(r){arcCharsMap=JSON.parse(r);return true;} } catch(e){}
     return false;
   }
-
   function updateChecklistProgress() {
     var total = 0;
     Object.values(arcCharsMap).forEach(function(c){ total += c; });
     if (total === 0) return;
-
     var done = 0;
-    document.querySelectorAll('[data-arc][data-done="true"]').forEach(function(el) {
+    document.querySelectorAll('[data-arc][data-done="true"]').forEach(function(el){
       var n = parseInt(el.getAttribute('data-arc'));
       done += (arcCharsMap[n] || 0);
     });
-
-    var pct = total > 0 ? Math.round(done / total * 100) : 0;
-    document.getElementById('arc-chars-progress').style.display = 'block';
-    document.getElementById('arc-chars-bar').style.width        = pct + '%';
-    document.getElementById('arc-chars-label').textContent      = done.toLocaleString('pt-BR') + ' / ' + total.toLocaleString('pt-BR');
-    document.getElementById('arc-chars-detail').textContent     = Object.keys(arcCharsMap).length + ' arcos mapeados';
-    document.getElementById('arc-chars-pct').textContent        = pct + '%';
-
-    document.querySelectorAll('.arc-chars-badge').forEach(function(badge) {
+    var pct = total > 0 ? Math.round(done/total*100) : 0;
+    var prog = document.getElementById('arc-chars-progress');
+    if (!prog) return;
+    prog.style.display = 'block';
+    document.getElementById('arc-chars-bar').style.width   = pct + '%';
+    document.getElementById('arc-chars-label').textContent  = done.toLocaleString('pt-BR') + ' / ' + total.toLocaleString('pt-BR');
+    document.getElementById('arc-chars-detail').textContent = Object.keys(arcCharsMap).length + ' arcos mapeados';
+    document.getElementById('arc-chars-pct').textContent    = pct + '%';
+    document.querySelectorAll('.arc-chars-badge').forEach(function(badge){
       var n = parseInt(badge.getAttribute('data-arc'));
       var chars = arcCharsMap[n];
       if (chars) {
-        badge.textContent  = chars.toLocaleString('pt-BR') + ' ch';
+        badge.textContent = chars.toLocaleString('pt-BR') + ' ch';
         badge.style.display = 'inline';
-        badge.style.color   = chars >= 5000 ? 'var(--green)' : chars >= 3000 ? 'var(--yellow)' : 'var(--red)';
       }
     });
   }
 
-  // Seed from DB if available (persistent, no sessionStorage needed)
-  var DB_ARC_CHARS = {{ prod.arc_chars_map | tojson }};
-  if (Object.keys(DB_ARC_CHARS).length > 0) {
-    // Convert string keys to int
-    var intMap = {};
-    Object.keys(DB_ARC_CHARS).forEach(function(k){ intMap[parseInt(k)] = DB_ARC_CHARS[k]; });
-    saveArcChars(intMap);
-    updateChecklistProgress();
+  // Seed from DB
+  var DB_ARC = {{ prod.arc_chars_map | tojson }};
+  if (Object.keys(DB_ARC).length > 0) {
+    var m = {};
+    Object.keys(DB_ARC).forEach(function(k){ m[parseInt(k)] = DB_ARC[k]; });
+    saveArcChars(m); updateChecklistProgress();
   } else if (loadArcChars() && Object.keys(arcCharsMap).length > 0) {
     updateChecklistProgress();
   }
 
-  var input       = document.getElementById('roteiro-input');
+  // Analyzer (producao only)
+  var input = document.getElementById('roteiro-input');
   var charCounter = document.getElementById('roteiro-chars');
-
   if (input) {
-    input.addEventListener('input', function() {
+    input.addEventListener('input', function(){
       var n = input.value.length;
       charCounter.textContent = n > 0 ? n.toLocaleString('pt-BR') + ' chars' : '';
     });
   }
 
+  function extractUSChars(lines) {
+    var usCol=-1, hIdx=-1;
+    for(var i=0;i<lines.length;i++){
+      var cols=lines[i].split('\t');
+      for(var j=0;j<cols.length;j++){
+        if(cols[j].indexOf('FALAS [US]')!==-1){usCol=j;hIdx=i;break;}
+      }
+      if(usCol!==-1) break;
+    }
+    if(usCol===-1) return lines.join('\n').length;
+    var t=0;
+    for(var i=hIdx+1;i<lines.length;i++){
+      var c=lines[i].split('\t');
+      if(c.length>usCol){var d=c[usCol].trim();if(d&&d!=='///'&&d.toUpperCase().indexOf('FALAS')===-1)t+=d.length;}
+    }
+    return t;
+  }
+
   window.analisarRoteiro = function() {
-    var texto     = input.value.trim();
-    var resultado = document.getElementById('roteiro-resultado');
-    var erro      = document.getElementById('roteiro-erro');
-    var summary   = document.getElementById('roteiro-summary');
-    var arcosDiv  = document.getElementById('roteiro-arcos');
-
-    resultado.style.display = 'none';
-    erro.style.display      = 'none';
-
-    if (!texto) {
-      erro.textContent = '⚠ Cole um roteiro antes de analisar.';
-      erro.style.display = 'block';
-      return;
-    }
-
-    function extractUSChars(lines) {
-      var usColIdx = -1, headerIdx = -1;
-      for (var i = 0; i < lines.length; i++) {
-        var cols = lines[i].split('\t');
-        for (var j = 0; j < cols.length; j++) {
-          if (cols[j].indexOf('FALAS [US]') !== -1 || cols[j].indexOf('FALAS US') !== -1) {
-            usColIdx = j; headerIdx = i; break;
-          }
-        }
-        if (usColIdx !== -1) break;
-      }
-      if (usColIdx === -1) return lines.join('\n').length;
-      var total = 0;
-      for (var i = headerIdx + 1; i < lines.length; i++) {
-        var cols = lines[i].split('\t');
-        if (cols.length > usColIdx) {
-          var d = cols[usColIdx].trim();
-          if (d && d !== '///' && d.toUpperCase().indexOf('FALAS') === -1) total += d.length;
-        }
-      }
-      return total;
-    }
-
-    // Line-by-line arc parser
-    var lines2 = texto.split(/\r?\n/);
-    var arcos = [], cur2 = null, curLines2 = [];
-    var arcRe2 = /^\s*\[?(?:ARCO|Arco)\s+(\d+)\]?\s*$/i;
-    lines2.forEach(function(line) {
-      var m = line.match(arcRe2);
-      if (m) {
-        if (cur2 !== null) arcos.push({ num: cur2, lines: curLines2.slice() });
-        cur2 = parseInt(m[1]); curLines2 = [];
-      } else if (cur2 !== null) { curLines2.push(line); }
-    });
-    if (cur2 !== null) arcos.push({ num: cur2, lines: curLines2.slice() });
-
-    if (arcos.length === 0) {
-      erro.innerHTML = '⚠ Nenhum marcador encontrado.<br><span style="color:var(--gray2);font-size:10px">Use: [ARCO 1] ou Arco 1 em linha separada.</span>';
-      erro.style.display = 'block';
-      return;
-    }
-
-    var newMap = {}, totalChars = 0;
+    var texto=input.value.trim();
+    var resultado=document.getElementById('roteiro-resultado');
+    var erro=document.getElementById('roteiro-erro');
+    var summary=document.getElementById('roteiro-summary');
+    var arcosDiv=document.getElementById('roteiro-arcos');
+    resultado.style.display='none'; erro.style.display='none';
+    if(!texto){erro.textContent='⚠ Cole um roteiro antes de analisar.';erro.style.display='block';return;}
+    var lines=texto.split(/\r?\n/), arcos=[], cur=null, curL=[], re=/^\s*\[?(?:ARCO|Arco)\s+(\d+)\]?\s*$/i;
+    lines.forEach(function(l){var m=l.match(re);if(m){if(cur!==null)arcos.push({num:cur,lines:curL.slice()});cur=parseInt(m[1]);curL=[];}else if(cur!==null)curL.push(l);});
+    if(cur!==null) arcos.push({num:cur,lines:curL.slice()});
+    if(arcos.length===0){erro.innerHTML='⚠ Nenhum marcador encontrado.';erro.style.display='block';return;}
+    var newMap={},totalChars=0;
+    arcos.forEach(function(a){var c=extractUSChars(a.lines);newMap[a.num]=c;totalChars+=c;});
+    arcos.sort(function(a,b){return a.num-b.num;});
+    saveArcChars(newMap); updateChecklistProgress();
+    var avg=Math.round(totalChars/arcos.length),mins=(totalChars/1000*5).toFixed(1);
+    summary.innerHTML='<span style="color:var(--text-secondary)">Arcos: <strong style="color:#bf5af2">'+arcos.length+'</strong></span>'+
+      '<span style="color:var(--text-secondary)">Total: <strong style="color:var(--text-primary)">'+totalChars.toLocaleString('pt-BR')+'</strong> ch</span>'+
+      '<span style="color:var(--text-secondary)">Média: <strong style="color:#bf5af2">'+avg.toLocaleString('pt-BR')+'</strong>/arco</span>'+
+      '<span style="color:var(--text-secondary)">~<strong style="color:var(--green)">'+mins+'</strong> min</span>';
+    var maxC=Math.max.apply(null,arcos.map(function(a){return a.chars;}));
+    var html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px">';
     arcos.forEach(function(a){
-      var c = extractUSChars(a.lines);
-      newMap[a.num] = c; totalChars += c;
+      var pct=maxC>0?Math.round(a.chars/maxC*100):0;
+      var col=a.chars>=5000?'var(--green)':a.chars>=3000?'var(--yellow)':'var(--red)';
+      html+='<div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:10px;padding:10px 12px">'+
+        '<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;font-weight:600;color:var(--text-primary)">Arco '+a.num+'</span><span style="font-size:11px;color:'+col+'">'+a.chars.toLocaleString('pt-BR')+'</span></div>'+
+        '<div style="background:rgba(255,255,255,0.08);height:4px;border-radius:2px"><div style="height:100%;background:'+col+';width:'+pct+'%;border-radius:2px"></div></div>'+
+        '<div style="font-size:10px;color:var(--text-tertiary);margin-top:4px">~'+(a.chars/1000*5).toFixed(1)+' min</div></div>';
     });
-    arcos.sort(function(a,b){ return a.num - b.num; });
-    saveArcChars(newMap);
-    updateChecklistProgress();
-
-    var avgChars = Math.round(totalChars / arcos.length);
-    var avgMins  = (totalChars / 1000 * 5).toFixed(1);
-    summary.innerHTML =
-      '<span style="color:var(--gray2)">◆ ARCOS: <span style="color:#bb44ff;font-family:var(--font-vt);font-size:18px">' + arcos.length + '</span></span>' +
-      '<span style="color:var(--gray2)">◆ TOTAL: <span style="color:var(--white);font-family:var(--font-vt);font-size:18px">' + totalChars.toLocaleString('pt-BR') + '</span> chars</span>' +
-      '<span style="color:var(--gray2)">◆ MÉDIA: <span style="color:#bb44ff;font-family:var(--font-vt);font-size:18px">' + avgChars.toLocaleString('pt-BR') + '</span>/arco</span>' +
-      '<span style="color:var(--gray2)">◆ DURAÇÃO: <span style="color:var(--green);font-family:var(--font-vt);font-size:18px">' + avgMins + '</span> min</span>';
-
-    var maxChars = Math.max.apply(null, arcos.map(function(a){ return a.chars; }));
-    var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">';
-    arcos.forEach(function(a) {
-      var pct   = maxChars > 0 ? Math.round(a.chars / maxChars * 100) : 0;
-      var color = a.chars >= 5000 ? 'var(--green)' : a.chars >= 3000 ? 'var(--yellow)' : 'var(--red)';
-      var mins  = (a.chars / 1000 * 5).toFixed(1);
-      var isDone = document.querySelector('[data-arc="' + a.num + '"][data-done="true"]') !== null;
-      html +=
-        '<div style="background:var(--card2);border:1px solid ' + (isDone ? 'var(--green)' : 'var(--border2)') + ';padding:10px 12px;' + (isDone ? 'opacity:.6' : '') + '">' +
-          '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">' +
-            '<span style="font-size:11px;color:' + (isDone ? 'var(--green)' : 'var(--white)') + '">' + (isDone ? '✔ ' : '') + 'ARCO ' + a.num + '</span>' +
-            '<span style="font-size:10px;color:' + color + '">' + a.chars.toLocaleString('pt-BR') + '</span>' +
-          '</div>' +
-          '<div style="background:var(--card);height:5px;border:1px solid var(--border2);margin-bottom:5px">' +
-            '<div style="height:100%;background:' + color + ';width:' + pct + '%"></div>' +
-          '</div>' +
-          '<div style="font-size:9px;color:var(--gray2)">~' + mins + ' min</div>' +
-        '</div>';
-    });
-    html += '</div>';
-    arcosDiv.innerHTML = html;
-    resultado.style.display = 'block';
+    html+='</div>'; arcosDiv.innerHTML=html; resultado.style.display='block';
   };
 
   window.limparAnalise = function() {
-    if (input) input.value = '';
-    document.getElementById('roteiro-resultado').style.display = 'none';
-    document.getElementById('roteiro-erro').style.display      = 'none';
-    document.getElementById('roteiro-chars').textContent       = '';
-    try { sessionStorage.removeItem(STORE_KEY); } catch(e) {}
-    arcCharsMap = {};
-    document.getElementById('arc-chars-progress').style.display = 'none';
-    document.querySelectorAll('.arc-chars-badge').forEach(function(b){ b.style.display='none'; b.textContent=''; });
+    if(input) input.value='';
+    document.getElementById('roteiro-resultado').style.display='none';
+    document.getElementById('roteiro-erro').style.display='none';
+    document.getElementById('roteiro-chars').textContent='';
+    try{sessionStorage.removeItem(STORE_KEY);}catch(e){}
+    arcCharsMap={};
+    var prog=document.getElementById('arc-chars-progress');
+    if(prog) prog.style.display='none';
   };
 })();
 </script>
