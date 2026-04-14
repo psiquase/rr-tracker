@@ -121,8 +121,8 @@
                  placeholder="Seu nome..." value="{{ request.form.get('producer','') }}" required/>
         </div>
 
-        {% if tab == 'producao' %}
-        <!-- Script area (only for producao) -->
+        {% if tab != 'short' %}
+        <!-- Script / arc detection — all types except short -->
         <div class="field-group">
           <label class="field-label">◆ COLE O ROTEIRO <span style="color:var(--gray2)">(detecta arcos automaticamente)</span></label>
           <div style="font-size:9px;color:var(--gray2);margin-bottom:6px">
@@ -130,15 +130,15 @@
             <strong style="color:var(--white)">[ARCO 1]...</strong> — conta apenas FALAS [US]
           </div>
           <textarea id="script-input" rows="7"
-                    style="width:100%;background:var(--card2);border:1px solid var(--border2);
+                    style="width:100%;background:var(--card2);border:1px solid {{ cur_color }}55;
                            color:var(--white);font-family:var(--font-pixel);font-size:10px;
                            padding:10px;resize:vertical;box-sizing:border-box;outline:none;line-height:1.6"
                     placeholder="Cole o roteiro aqui para detectar arcos automaticamente..."></textarea>
           <div id="arc-detect-result" style="display:none;margin-top:8px;
-               background:var(--panel);border-left:3px solid var(--green);padding:8px 12px">
-            <span style="font-size:10px;color:var(--green)">✔ DETECTADO: </span>
-            <span id="arc-detect-count" style="font-family:var(--font-vt);font-size:20px;color:var(--green)"></span>
-            <span style="font-size:10px;color:var(--green)"> arcos</span>
+               background:var(--panel);border-left:3px solid {{ cur_color }};padding:8px 12px">
+            <span style="font-size:10px;color:{{ cur_color }}">✔ DETECTADO: </span>
+            <span id="arc-detect-count" style="font-family:var(--font-vt);font-size:20px;color:{{ cur_color }}"></span>
+            <span style="font-size:10px;color:{{ cur_color }}"> arcos</span>
             <span id="arc-detect-chars" style="font-size:9px;color:var(--gray2);margin-left:12px"></span>
           </div>
           <div id="arc-detect-none" style="display:none;margin-top:8px;
@@ -150,26 +150,6 @@
           <label class="field-label">◆ NÚMERO DE ARCOS <span style="color:var(--gray2)">(se não colar roteiro)</span></label>
           <input class="pixel-input" type="number" id="manual-arcs-input" min="1" max="15" placeholder="11" style="padding:8px 10px;width:120px"/>
           <span style="font-size:9px;color:var(--gray2);display:block;margin-top:3px">Máximo 15 arcos</span>
-        </div>
-
-        {% elif tab in ('roteiro', 'decupagem', 'edicao') %}
-        <!-- Script area for roteiro, decupagem, edicao -->
-        {% set tab_color = '#bb44ff' if tab=='roteiro' else 'var(--blue)' if tab=='decupagem' else 'var(--green)' %}
-        <div class="field-group">
-          <label class="field-label">◆ COLE O ROTEIRO <span style="color:var(--gray2)">(opcional — conta FALAS [US])</span></label>
-          <textarea id="script-input" rows="6"
-                    style="width:100%;background:var(--card2);border:1px solid {{ tab_color }}44;
-                           color:var(--white);font-family:var(--font-pixel);font-size:10px;
-                           padding:10px;resize:vertical;box-sizing:border-box;outline:none;line-height:1.6"
-                    placeholder="Cole o roteiro aqui para contar caracteres automaticamente..."></textarea>
-          <div id="arc-detect-result" style="display:none;margin-top:8px;
-               background:var(--panel);border-left:3px solid {{ tab_color }};padding:8px 12px">
-            <span style="font-size:10px;color:{{ tab_color }}">✔ DETECTADO: </span>
-            <span id="arc-detect-count" style="font-family:var(--font-vt);font-size:20px;color:{{ tab_color }}"></span>
-            <span style="font-size:10px;color:{{ tab_color }}"> arcos</span>
-            <span id="arc-detect-chars" style="font-size:9px;color:var(--gray2);margin-left:12px"></span>
-          </div>
-          <div id="arc-detect-none" style="display:none"></div>
         </div>
         {% endif %}
 
