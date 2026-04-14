@@ -108,7 +108,8 @@ def init_db():
                 script_chars INTEGER DEFAULT 0,
                 arc_chars    TEXT    DEFAULT '',
                 arc_notes    TEXT    DEFAULT '',
-                co_producers TEXT    DEFAULT ''
+                co_producers TEXT    DEFAULT '',
+                elapsed_minutes INTEGER DEFAULT 0
             );
 
             CREATE TABLE IF NOT EXISTS production_daily (
@@ -137,7 +138,8 @@ def init_db():
                 started_at   TEXT    NOT NULL,
                 completed_at TEXT,
                 paused_at    TEXT,
-                notes        TEXT    DEFAULT ''
+                notes        TEXT    DEFAULT '',
+                elapsed_minutes INTEGER DEFAULT 0
             );
         """)
 
@@ -153,6 +155,12 @@ def init_db():
             conn.execute("ALTER TABLE productions ADD COLUMN arc_notes TEXT DEFAULT ''")
         if 'co_producers' not in prod_cols:
             conn.execute("ALTER TABLE productions ADD COLUMN co_producers TEXT DEFAULT ''")
+        if 'elapsed_minutes' not in prod_cols:
+            conn.execute("ALTER TABLE productions ADD COLUMN elapsed_minutes INTEGER DEFAULT 0")
+        # ── Shorts: migrate elapsed_minutes ──────────────────
+        short_cols = [r[1] for r in conn.execute("PRAGMA table_info(shorts)").fetchall()]
+        if 'elapsed_minutes' not in short_cols:
+            conn.execute("ALTER TABLE shorts ADD COLUMN elapsed_minutes INTEGER DEFAULT 0")
         conn.commit()
 
 
@@ -252,7 +260,7 @@ def db_production_report():
         p['prod_type']       = p.get('prod_type') or 'producao'
         p['arcs_done_list']  = json.loads(p.get('arcs_done') or '[]')
         p['arcs_done_count'] = len(p['arcs_done_list'])
-        if p['prod_type'] == 'producao':
+        if type_id == 'producao':
             if p['status'] == 'concluido' and p.get('completed_at'):
                 p['duration_bdays'] = calc_bdays(p['started_at'], p['completed_at'])
             else:
@@ -260,11 +268,15 @@ def db_production_report():
             p['duration_label'] = f"{p['duration_bdays']} d.u."
             p['duration_minutes'] = 0
         else:
+            elapsed = p.get('elapsed_minutes') or 0
             if p['status'] == 'concluido' and p.get('completed_at'):
-                p['duration_minutes'] = calc_minutes(p['started_at'], p['completed_at'])
+                mins = elapsed if elapsed > 0 else calc_minutes(p['started_at'], p['completed_at'])
+            elif p['status'] == 'pausado':
+                mins = elapsed
             else:
-                p['duration_minutes'] = calc_minutes(p['started_at'], datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-            p['duration_label']   = format_duration(p['duration_minutes'])
+                mins = elapsed + calc_minutes(p['started_at'], datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            p['duration_minutes'] = mins
+            p['duration_label']   = format_duration(mins)
             p['duration_bdays']   = 0
 
     # Per-type summaries
@@ -506,17 +518,24 @@ def db_shorts_report():
 
 def enrich_short(s):
     d = dict(s)
+    elapsed = d.get('elapsed_minutes') or 0
     if d['status'] == 'concluido' and d.get('completed_at'):
-        mins = calc_minutes(d['started_at'], d['completed_at'])
+        # Use stored elapsed (already accumulated at completion)
+        mins = elapsed if elapsed > 0 else calc_minutes(d['started_at'], d['completed_at'])
         d['duration_minutes'] = mins
         d['duration_label']   = format_duration(mins)
         d['duration_bdays']   = calc_bdays(d['started_at'], d['completed_at'])
+    elif d['status'] == 'pausado':
+        # Paused — show only accumulated time (frozen)
+        d['duration_minutes'] = elapsed
+        d['duration_label']   = format_duration(elapsed) + " ⏸"
+        d['duration_bdays']   = 0
     else:
-        # In progress — show elapsed minutes
+        # Running — accumulated + current session
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        mins = calc_minutes(d['started_at'], now)
+        mins = elapsed + calc_minutes(d['started_at'], now)
         d['duration_minutes'] = mins
-        d['duration_label']   = format_duration(mins) + " (em curso)"
+        d['duration_label']   = format_duration(mins)
         d['duration_bdays']   = 0
     d['started_display']   = d['started_at'][:16].replace('T',' ')
     d['completed_display'] = d['completed_at'][:16].replace('T',' ') if d.get('completed_at') else '—'
@@ -575,12 +594,26 @@ def shorts_status(sid):
         return redirect(url_for("productions"))
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with get_db() as c:
-        if new_status == "concluido":
-            c.execute("UPDATE shorts SET status=?, completed_at=? WHERE id=?",
+        s = c.execute("SELECT * FROM shorts WHERE id=?", (sid,)).fetchone()
+        if not s:
+            return redirect(url_for("productions"))
+        s = dict(s)
+        elapsed = s.get('elapsed_minutes') or 0
+
+        if new_status == "pausado" and s['status'] not in ('pausado', 'concluido'):
+            # Accumulate time since last resume
+            elapsed += calc_minutes(s['started_at'], now)
+            c.execute("UPDATE shorts SET status=?, paused_at=?, elapsed_minutes=? WHERE id=?",
+                      (new_status, now, elapsed, sid))
+        elif new_status in ("em_andamento", "iniciado") and s['status'] == 'pausado':
+            # Resuming: reset started_at to now, keep elapsed
+            c.execute("UPDATE shorts SET status=?, started_at=?, paused_at=NULL WHERE id=?",
                       (new_status, now, sid))
-        elif new_status == "pausado":
-            c.execute("UPDATE shorts SET status=?, paused_at=? WHERE id=?",
-                      (new_status, now, sid))
+        elif new_status == "concluido":
+            if s['status'] != 'pausado':
+                elapsed += calc_minutes(s['started_at'], now)
+            c.execute("UPDATE shorts SET status=?, completed_at=?, elapsed_minutes=? WHERE id=?",
+                      (new_status, now, elapsed, sid))
         else:
             c.execute("UPDATE shorts SET status=? WHERE id=?", (new_status, sid))
     return redirect(url_for("productions"))
@@ -696,11 +729,18 @@ def enrich_production(p):
 
     # Duration in minutes (for roteiro/decupagem/edicao — like Shorts)
     if d['prod_type'] != 'producao':
+        elapsed = d.get('elapsed_minutes') or 0
         if d['status'] == 'concluido' and d.get('completed_at'):
-            d['duration_minutes'] = calc_minutes(d['started_at'], d['completed_at'])
+            mins = elapsed if elapsed > 0 else calc_minutes(d['started_at'], d['completed_at'])
+            d['duration_minutes'] = mins
+            d['duration_label']   = format_duration(mins)
+        elif d['status'] == 'pausado':
+            d['duration_minutes'] = elapsed
+            d['duration_label']   = format_duration(elapsed) + " ⏸"
         else:
-            d['duration_minutes'] = calc_minutes(d['started_at'], datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        d['duration_label'] = format_duration(d['duration_minutes']) + ('' if d['status']=='concluido' else ' ⏳')
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            d['duration_minutes'] = elapsed + calc_minutes(d['started_at'], now)
+            d['duration_label']   = format_duration(d['duration_minutes'])
     else:
         d['duration_minutes'] = 0
         d['duration_label']   = f"{d.get('duration_bdays',0)} d.u."
@@ -945,12 +985,38 @@ def production_status(pid):
         return redirect(url_for("production_detail", pid=pid))
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with get_db() as c:
-        if new_status == "pausado":
-            c.execute("UPDATE productions SET status=?, paused_at=?, updated_at=? WHERE id=?", (new_status, now, now, pid))
-        elif new_status == "concluido":
-            c.execute("UPDATE productions SET status=?, completed_at=?, updated_at=? WHERE id=?", (new_status, now, now, pid))
+        p = c.execute("SELECT * FROM productions WHERE id=?", (pid,)).fetchone()
+        if not p:
+            return redirect(url_for("productions"))
+        p = dict(p)
+        elapsed = p.get('elapsed_minutes') or 0
+        pt = p.get('prod_type') or 'producao'
+
+        if pt != 'producao':
+            # Timer-based types — accumulate elapsed on pause/complete
+            if new_status == "pausado" and p['status'] not in ('pausado','concluido'):
+                elapsed += calc_minutes(p['started_at'], now)
+                c.execute("UPDATE productions SET status=?, paused_at=?, updated_at=?, elapsed_minutes=? WHERE id=?",
+                          (new_status, now, now, elapsed, pid))
+            elif new_status in ("em_andamento","iniciado") and p['status'] == 'pausado':
+                # Resume: reset started_at to now, keep elapsed
+                c.execute("UPDATE productions SET status=?, started_at=?, paused_at=NULL, updated_at=? WHERE id=?",
+                          (new_status, now, now, pid))
+            elif new_status == "concluido":
+                if p['status'] != 'pausado':
+                    elapsed += calc_minutes(p['started_at'], now)
+                c.execute("UPDATE productions SET status=?, completed_at=?, updated_at=?, elapsed_minutes=? WHERE id=?",
+                          (new_status, now, now, elapsed, pid))
+            else:
+                c.execute("UPDATE productions SET status=?, updated_at=? WHERE id=?", (new_status, now, pid))
         else:
-            c.execute("UPDATE productions SET status=?, updated_at=? WHERE id=?", (new_status, now, pid))
+            # Producao — day-based tracking, no timer
+            if new_status == "pausado":
+                c.execute("UPDATE productions SET status=?, paused_at=?, updated_at=? WHERE id=?", (new_status, now, now, pid))
+            elif new_status == "concluido":
+                c.execute("UPDATE productions SET status=?, completed_at=?, updated_at=? WHERE id=?", (new_status, now, now, pid))
+            else:
+                c.execute("UPDATE productions SET status=?, updated_at=? WHERE id=?", (new_status, now, pid))
     return redirect(url_for("production_detail", pid=pid))
 
 
