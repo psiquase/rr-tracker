@@ -92,7 +92,9 @@ def init_db():
                 completed_at TEXT,
                 notes        TEXT    DEFAULT '',
                 script_chars INTEGER DEFAULT 0,
-                arc_chars    TEXT    DEFAULT ''
+                arc_chars    TEXT    DEFAULT '',
+                arc_notes    TEXT    DEFAULT '',
+                co_producers TEXT    DEFAULT ''
             );
 
             CREATE TABLE IF NOT EXISTS production_daily (
@@ -133,6 +135,10 @@ def init_db():
             conn.execute("ALTER TABLE productions ADD COLUMN arc_chars TEXT DEFAULT ''")
         if 'prod_type' not in prod_cols:
             conn.execute("ALTER TABLE productions ADD COLUMN prod_type TEXT DEFAULT 'producao'")
+        if 'arc_notes' not in prod_cols:
+            conn.execute("ALTER TABLE productions ADD COLUMN arc_notes TEXT DEFAULT ''")
+        if 'co_producers' not in prod_cols:
+            conn.execute("ALTER TABLE productions ADD COLUMN co_producers TEXT DEFAULT ''")
         conn.commit()
 
 
@@ -689,6 +695,12 @@ def enrich_production(p):
         d['arc_chars_map'] = {int(k): v for k,v in json.loads(raw_arc).items()}
     except Exception:
         d['arc_chars_map'] = {}
+    try:
+        d['arc_notes_map'] = json.loads(d.get('arc_notes') or '{}')
+    except Exception:
+        d['arc_notes_map'] = {}
+    d['co_producers']    = d.get('co_producers') or ''
+    d['all_producers']   = ([d['producer']] + [p.strip() for p in d['co_producers'].split(',') if p.strip()])
     # Use sum of arc_chars_map as the authoritative total (FALAS [US] only)
     # Fall back to script_chars if no per-arc data exists
     arc_map_total = sum(d['arc_chars_map'].values()) if d['arc_chars_map'] else 0
@@ -858,6 +870,44 @@ def production_arc_chars(pid):
             (json.dumps(arc_map), new_total, now, pid)
         )
     return redirect(url_for("production_detail", pid=pid))
+
+
+@app.route("/productions/<int:pid>/arc_note", methods=["POST"])
+def production_arc_note(pid):
+    arc_num = str(int(request.form.get("arc", 0)))
+    note    = request.form.get("note", "").strip()
+    with get_db() as c:
+        p = c.execute("SELECT arc_notes FROM productions WHERE id=?", (pid,)).fetchone()
+        if not p:
+            return redirect(url_for("productions"))
+        notes_map = json.loads(p["arc_notes"] or "{}")
+        if note:
+            notes_map[arc_num] = note
+        else:
+            notes_map.pop(arc_num, None)
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        c.execute("UPDATE productions SET arc_notes=?, updated_at=? WHERE id=?",
+                  (json.dumps(notes_map), now, pid))
+    return redirect(url_for("production_detail", pid=pid))
+
+
+@app.route("/productions/<int:pid>/edit", methods=["POST"])
+def production_edit(pid):
+    title        = request.form.get("title", "").strip()
+    producer     = request.form.get("producer", "").strip()
+    co_producers = request.form.get("co_producers", "").strip()
+    if not title or not producer:
+        return redirect(url_for("production_detail", pid=pid))
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with get_db() as c:
+        c.execute(
+            "UPDATE productions SET title=?, producer=?, co_producers=?, updated_at=? WHERE id=?",
+            (title, producer, co_producers, now, pid)
+        )
+    return redirect(url_for("production_detail", pid=pid))
+
+
+@app.route("/productions/<int:pid>/status", methods=["POST"])
 def production_status(pid):
     new_status = request.form.get("status", "")
     valid = ("iniciado", "em_andamento", "pausado", "concluido")
@@ -866,20 +916,11 @@ def production_status(pid):
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with get_db() as c:
         if new_status == "pausado":
-            c.execute(
-                "UPDATE productions SET status=?, paused_at=?, updated_at=? WHERE id=?",
-                (new_status, now, now, pid)
-            )
+            c.execute("UPDATE productions SET status=?, paused_at=?, updated_at=? WHERE id=?", (new_status, now, now, pid))
         elif new_status == "concluido":
-            c.execute(
-                "UPDATE productions SET status=?, completed_at=?, updated_at=? WHERE id=?",
-                (new_status, now, now, pid)
-            )
+            c.execute("UPDATE productions SET status=?, completed_at=?, updated_at=? WHERE id=?", (new_status, now, now, pid))
         else:
-            c.execute(
-                "UPDATE productions SET status=?, updated_at=? WHERE id=?",
-                (new_status, now, pid)
-            )
+            c.execute("UPDATE productions SET status=?, updated_at=? WHERE id=?", (new_status, now, pid))
     return redirect(url_for("production_detail", pid=pid))
 
 
