@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff6b35"/>
+      <stop offset="50%" stop-color="#ff453a"/>
+      <stop offset="100%" stop-color="#bf5af2"/>
+    </linearGradient>
+  </defs>
+  <!-- Body -->
+  <ellipse cx="16" cy="19" rx="6" ry="8" fill="url(#g)"/>
+  <!-- Wings -->
+  <path d="M10 16 C4 10 2 6 6 4 C8 8 10 12 14 14 Z" fill="url(#g)" opacity="0.9"/>
+  <path d="M22 16 C28 10 30 6 26 4 C24 8 22 12 18 14 Z" fill="url(#g)" opacity="0.9"/>
+  <!-- Tail flames -->
+  <path d="M12 24 C10 28 8 30 10 32 C12 30 14 27 16 26 Z" fill="#ff6b35" opacity="0.8"/>
+  <path d="M20 24 C22 28 24 30 22 32 C20 30 18 27 16 26 Z" fill="#ff453a" opacity="0.8"/>
+  <path d="M16 25 C15 29 14 32 16 32 C18 32 17 29 16 25 Z" fill="#ffd60a" opacity="0.9"/>
+  <!-- Head -->
+  <circle cx="16" cy="10" r="4" fill="url(#g)"/>
+  <!-- Crest -->
+  <path d="M14 7 C13 3 15 1 16 0 C17 1 19 3 18 7 Z" fill="#ffd60a"/>
+  <!-- Eye -->
+  <circle cx="16" cy="10" r="1.2" fill="#fff" opacity="0.9"/>
+</svg>
