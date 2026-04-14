@@ -10,15 +10,19 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
-
 <div class="layout">
 
   <!-- ══ SIDEBAR ══════════════════════════════════════════ -->
   <aside class="sidebar">
 
     <div class="logo-block">
+      <!-- macOS traffic lights -->
+      <div class="traffic-lights">
+        <div class="tl tl-red"></div>
+        <div class="tl tl-yellow"></div>
+        <div class="tl tl-green"></div>
+      </div>
       <div class="logo-inner">
-        <div class="logo-bar"></div>
         <span class="logo-title">Produção Phoenix</span>
         <span class="logo-sub">Sistema de Regravaçôes</span>
         <span class="logo-ver">v2.0 · Web Edition</span>
@@ -30,33 +34,27 @@
     <nav class="nav">
       {% if is_admin %}
         <a href="/dashboard" class="pixel-btn blue {% if active=='dashboard' %}active{% endif %}">
-          <span class="btn-stripe"></span>
           <span class="btn-icon">⊞</span>
           <span class="btn-label">Dashboard</span>
         </a>
         <a href="/reports" class="pixel-btn yellow {% if active=='reports' %}active{% endif %}">
-          <span class="btn-stripe"></span>
           <span class="btn-icon">◑</span>
           <span class="btn-label">Relatórios</span>
         </a>
         <a href="/productions" class="pixel-btn red {% if active=='productions' %}active{% endif %}">
-          <span class="btn-stripe"></span>
           <span class="btn-icon">▶</span>
           <span class="btn-label">Produções</span>
         </a>
       {% else %}
         <a href="/register" class="pixel-btn green {% if active=='register' %}active{% endif %}">
-          <span class="btn-stripe"></span>
-          <span class="btn-icon">+</span>
+          <span class="btn-icon">＋</span>
           <span class="btn-label">Regravaçôes</span>
         </a>
         <a href="/productions/new" class="pixel-btn red {% if active=='production_new' %}active{% endif %}">
-          <span class="btn-stripe"></span>
           <span class="btn-icon">▶</span>
           <span class="btn-label">Nova Produção</span>
         </a>
         <a href="/productions" class="pixel-btn blue {% if active=='productions' %}active{% endif %}">
-          <span class="btn-stripe"></span>
           <span class="btn-icon">⊞</span>
           <span class="btn-label">Produções</span>
         </a>
@@ -65,31 +63,31 @@
 
     <div class="sidebar-divider"></div>
 
-    <div style="padding:0 8px">
+    <!-- Auth -->
+    <div style="padding:0 10px">
       {% if is_admin %}
-        <div style="font-size:10px;color:var(--text-tertiary);padding:4px 12px 6px;text-transform:uppercase;letter-spacing:0.5px">Admin ativo</div>
-        <a href="/logout" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r-sm);text-decoration:none;font-size:13px;font-weight:500;color:var(--red);transition:background 0.12s" onmouseover="this.style.background='rgba(255,69,58,0.10)'" onmouseout="this.style.background='transparent'">
-          <span style="font-size:14px;width:20px;text-align:center">↪</span>
+        <div style="font-size:10px;color:var(--text-tertiary);padding:4px 12px 6px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600">Admin</div>
+        <a href="/logout" style="display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:500;color:var(--red);transition:background 0.12s" onmouseover="this.style.background='rgba(255,69,58,0.12)'" onmouseout="this.style.background='transparent'">
+          <span style="font-size:14px;width:22px;text-align:center;opacity:0.8">↪</span>
           <span>Sair</span>
         </a>
       {% else %}
-        <div style="font-size:10px;color:var(--text-tertiary);padding:4px 12px 6px;text-transform:uppercase;letter-spacing:0.5px">Área restrita</div>
-        <a href="/login" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r-sm);text-decoration:none;font-size:13px;font-weight:500;color:var(--blue);transition:background 0.12s" onmouseover="this.style.background='rgba(10,132,255,0.10)'" onmouseout="this.style.background='transparent'">
-          <span style="font-size:14px;width:20px;text-align:center">🔒</span>
+        <div style="font-size:10px;color:var(--text-tertiary);padding:4px 12px 6px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600">Área Restrita</div>
+        <a href="/login" style="display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:500;color:var(--blue);transition:background 0.12s" onmouseover="this.style.background='rgba(10,132,255,0.12)'" onmouseout="this.style.background='transparent'">
+          <span style="font-size:14px;width:22px;text-align:center;opacity:0.8">🔒</span>
           <span>Acesso Admin</span>
         </a>
       {% endif %}
     </div>
 
+    <!-- Mini stat -->
     <div class="mini-stat" id="mini-stat-block">
       <div class="mini-stat-label">Total</div>
       <div class="mini-stat-value" id="mini-total">—</div>
       <div class="mini-stat-sub">regravaçôes</div>
     </div>
 
-    <div class="sidebar-footer">
-      Flask · SQLite · Chart.js
-    </div>
+    <div class="sidebar-footer">Flask · SQLite · Chart.js</div>
   </aside>
 
   <!-- ══ MAIN ═════════════════════════════════════════════ -->
@@ -111,21 +109,19 @@
 
 <script>
   function tick(){
-    const n = new Date();
-    const p = v => String(v).padStart(2,'0');
+    const n = new Date(), p = v => String(v).padStart(2,'0');
     document.getElementById('clock').textContent =
       `${p(n.getDate())}/${p(n.getMonth()+1)}/${n.getFullYear()}  ${p(n.getHours())}:${p(n.getMinutes())}:${p(n.getSeconds())}`;
   }
-  tick(); setInterval(tick, 1000);
+  tick(); setInterval(tick,1000);
 
   fetch('/api/chart-data').then(r=>r.json()).then(d=>{
-    const total = d.producers.reduce((s,p)=>s+p.total, 0);
+    const total = d.producers.reduce((s,p)=>s+p.total,0);
     const el = document.getElementById('mini-total');
     el.textContent = total;
-    el.style.color = total>=30 ? 'var(--red)' : total>=10 ? 'var(--yellow)' : 'var(--green)';
+    el.style.color = total>=30?'var(--red)':total>=10?'var(--yellow)':'var(--green)';
   }).catch(()=>{});
 </script>
-
 {% block scripts %}{% endblock %}
 </body>
 </html>
