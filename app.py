@@ -82,6 +82,7 @@ def init_db():
                 id           INTEGER PRIMARY KEY AUTOINCREMENT,
                 title        TEXT    NOT NULL,
                 producer     TEXT    NOT NULL,
+                prod_type    TEXT    DEFAULT 'producao',
                 total_arcs   INTEGER NOT NULL DEFAULT 11,
                 arcs_done    TEXT    DEFAULT '[]',
                 status       TEXT    DEFAULT 'iniciado',
@@ -91,7 +92,7 @@ def init_db():
                 completed_at TEXT,
                 notes        TEXT    DEFAULT '',
                 script_chars INTEGER DEFAULT 0,
-                arc_chars    TEXT    DEFAULT '{}'
+                arc_chars    TEXT    DEFAULT ''
             );
 
             CREATE TABLE IF NOT EXISTS production_daily (
@@ -129,7 +130,9 @@ def init_db():
         if 'script_chars' not in prod_cols:
             conn.execute("ALTER TABLE productions ADD COLUMN script_chars INTEGER DEFAULT 0")
         if 'arc_chars' not in prod_cols:
-            conn.execute("ALTER TABLE productions ADD COLUMN arc_chars TEXT DEFAULT '{}'")
+            conn.execute("ALTER TABLE productions ADD COLUMN arc_chars TEXT DEFAULT ''")
+        if 'prod_type' not in prod_cols:
+            conn.execute("ALTER TABLE productions ADD COLUMN prod_type TEXT DEFAULT 'producao'")
         conn.commit()
 
 
@@ -645,6 +648,7 @@ def enrich_production(p):
     d['arcs_done_count'] = len(d['arcs_done_list'])
     d['bdays']           = business_days_since(d['started_at'])
     d['dl_color']        = deadline_color(d['bdays'], d['status'])
+    d['prod_type']        = d.get('prod_type') or 'producao'
     d['script_chars']    = d.get('script_chars') or 0
     raw_arc              = d.get('arc_chars') or '{}'
     try:
@@ -718,18 +722,20 @@ def production_new():
         else:
             now          = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             script_chars = int(request.form.get("script_chars", "0") or "0")
-            arc_chars_raw = request.form.get("arc_chars", "{}")
-            # Validate JSON
+            arc_chars_raw = request.form.get("arc_chars", "")
+            prod_type    = request.form.get("prod_type", "producao")
+            if prod_type not in ("producao","roteiro","decupagem","edicao"):
+                prod_type = "producao"
             try:
-                json.loads(arc_chars_raw)
+                json.loads(arc_chars_raw or "{}")
             except Exception:
-                arc_chars_raw = "{}"
+                arc_chars_raw = ""
             with get_db() as c:
                 c.execute(
                     ("INSERT INTO productions "
-                     "(title,producer,total_arcs,arcs_done,status,started_at,updated_at,notes,script_chars,arc_chars) "
-                     "VALUES (?,?,?,'[]','iniciado',?,?,?,?,?)"),
-                    (title, producer, int(total_arcs), now, now, notes, script_chars, arc_chars_raw)
+                     "(title,producer,prod_type,total_arcs,arcs_done,status,started_at,updated_at,notes,script_chars,arc_chars) "
+                     "VALUES (?,?,?,?,'[]','iniciado',?,?,?,?,?)"),
+                    (title, producer, prod_type, int(total_arcs), now, now, notes, script_chars, arc_chars_raw)
                 )
             msg      = f"✔  Produção registrada: {title}"
             msg_type = "success"
