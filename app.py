@@ -221,54 +221,76 @@ def calc_bdays(start_str, end_str=None):
 
 
 def db_production_report():
-    # Returns per-producer summary + all productions list for the report.
+    # Returns per-producer summary + all productions grouped by type
     with get_db() as c:
         all_prods = [dict(r) for r in c.execute(
             "SELECT * FROM productions ORDER BY producer, started_at DESC"
         ).fetchall()]
 
-    # Enrich each production with duration
+    # Enrich each production
     for p in all_prods:
-        p['arcs_done_list'] = json.loads(p.get('arcs_done') or '[]')
+        p['prod_type']       = p.get('prod_type') or 'producao'
+        p['arcs_done_list']  = json.loads(p.get('arcs_done') or '[]')
         p['arcs_done_count'] = len(p['arcs_done_list'])
-        if p['status'] == 'concluido' and p.get('completed_at'):
-            p['duration_bdays'] = calc_bdays(p['started_at'], p['completed_at'])
+        if p['prod_type'] == 'producao':
+            if p['status'] == 'concluido' and p.get('completed_at'):
+                p['duration_bdays'] = calc_bdays(p['started_at'], p['completed_at'])
+            else:
+                p['duration_bdays'] = calc_bdays(p['started_at'])
             p['duration_label'] = f"{p['duration_bdays']} d.u."
+            p['duration_minutes'] = 0
         else:
-            p['duration_bdays'] = calc_bdays(p['started_at'])
-            p['duration_label'] = f"{p['duration_bdays']} d.u. (em curso)"
+            if p['status'] == 'concluido' and p.get('completed_at'):
+                p['duration_minutes'] = calc_minutes(p['started_at'], p['completed_at'])
+            else:
+                p['duration_minutes'] = calc_minutes(p['started_at'], datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            p['duration_label']   = format_duration(p['duration_minutes'])
+            p['duration_bdays']   = 0
 
-    # Group by producer
+    # Per-type summaries
+    type_labels = {'producao':'PRODUÇÃO','roteiro':'ROTEIRO','decupagem':'DECUPAGEM','edicao':'EDIÇÃO'}
+    types_summ = {}
+    for type_id, label in type_labels.items():
+        items = [p for p in all_prods if p['prod_type']==type_id]
+        concluidos = [p for p in items if p['status']=='concluido']
+        if type_id == 'producao':
+            avg = round(sum(p['duration_bdays'] for p in concluidos)/len(concluidos),1) if concluidos else None
+            avg_label = f"{avg} d.u." if avg is not None else None
+        else:
+            avg = round(sum(p['duration_minutes'] for p in concluidos)/len(concluidos)) if concluidos else None
+            avg_label = format_duration(avg) if avg is not None else None
+        types_summ[type_id] = {
+            'label':      label,
+            'total':      len(items),
+            'andamento':  sum(1 for p in items if p['status'] in ('iniciado','em_andamento')),
+            'pausado':    sum(1 for p in items if p['status']=='pausado'),
+            'concluido':  len(concluidos),
+            'avg_label':  avg_label,
+            'items':      items,
+        }
+
+    # Per-producer summary (producao only — days)
     producers = {}
     for p in all_prods:
         name = p['producer']
         if name not in producers:
             producers[name] = {
-                'producer':    name,
-                'total':       0,
-                'iniciado':    0,
-                'em_andamento':0,
-                'pausado':     0,
-                'concluido':   0,
-                'avg_bdays':   0,
-                '_durations':  [],
-                'productions': [],
+                'producer':    name, 'total': 0,
+                'iniciado':    0, 'em_andamento': 0,
+                'pausado':     0, 'concluido': 0,
+                'avg_bdays':   None, '_durations': [],
             }
         g = producers[name]
         g['total'] += 1
-        status = p['status']
-        if status in g: g[status] += 1
-        if p['status'] == 'concluido':
+        if p['status'] in g: g[p['status']] += 1
+        if p['prod_type']=='producao' and p['status']=='concluido':
             g['_durations'].append(p['duration_bdays'])
-        g['productions'].append(p)
-
-    # Compute averages
     for g in producers.values():
         d = g['_durations']
-        g['avg_bdays'] = round(sum(d) / len(d), 1) if d else None
+        g['avg_bdays'] = round(sum(d)/len(d),1) if d else None
         del g['_durations']
 
-    return list(producers.values()), all_prods
+    return list(producers.values()), all_prods, types_summ
 
 
 # ═══════════════════════════════════════════
@@ -378,7 +400,7 @@ def reports():
     total = sum(r["count"] for r in rows)
 
     # Production report data
-    prod_by_producer, all_prods = db_production_report()
+    prod_by_producer, all_prods, types_summ = db_production_report()
     shorts_summ, all_shorts     = db_shorts_report()
 
     return render_template("reports.html",
@@ -389,6 +411,7 @@ def reports():
                            tab=tab,
                            prod_by_producer=prod_by_producer,
                            all_prods=all_prods,
+                           types_summ=types_summ,
                            shorts_summ=shorts_summ,
                            all_shorts=[enrich_short(s) for s in all_shorts],
                            active="reports")
@@ -650,6 +673,17 @@ def enrich_production(p):
     d['dl_color']        = deadline_color(d['bdays'], d['status'])
     d['prod_type']        = d.get('prod_type') or 'producao'
     d['script_chars']    = d.get('script_chars') or 0
+
+    # Duration in minutes (for roteiro/decupagem/edicao — like Shorts)
+    if d['prod_type'] != 'producao':
+        if d['status'] == 'concluido' and d.get('completed_at'):
+            d['duration_minutes'] = calc_minutes(d['started_at'], d['completed_at'])
+        else:
+            d['duration_minutes'] = calc_minutes(d['started_at'], datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        d['duration_label'] = format_duration(d['duration_minutes']) + ('' if d['status']=='concluido' else ' ⏳')
+    else:
+        d['duration_minutes'] = 0
+        d['duration_label']   = f"{d.get('duration_bdays',0)} d.u."
     raw_arc              = d.get('arc_chars') or '{}'
     try:
         d['arc_chars_map'] = {int(k): v for k,v in json.loads(raw_arc).items()}
@@ -889,7 +923,7 @@ def reports_download():
     total_rr   = sum(r["count"] for r in rows)
     st         = db_stats()
     prods_by   = db_by_producer()
-    prod_summ, all_prods = db_production_report()
+    prod_summ, all_prods, types_summ = db_production_report()
     shorts_summ, all_shorts_raw = db_shorts_report()
     all_shorts = [enrich_short(s) for s in all_shorts_raw]
 
