@@ -836,7 +836,28 @@ def production_arc(pid):
     return redirect(url_for("production_detail", pid=pid))
 
 
-@app.route("/productions/<int:pid>/status", methods=["POST"])
+@app.route("/productions/<int:pid>/arc_chars", methods=["POST"])
+def production_arc_chars(pid):
+    """Save manually entered chars per arc for roteiro/decupagem/edicao."""
+    arc_num = int(request.form.get("arc", 0))
+    chars   = int(request.form.get("chars", 0) or 0)
+    if chars < 0: chars = 0
+    with get_db() as c:
+        p = c.execute("SELECT arc_chars, script_chars, total_arcs FROM productions WHERE id=?", (pid,)).fetchone()
+        if not p:
+            return redirect(url_for("productions"))
+        arc_map = json.loads(p["arc_chars"] or "{}")
+        if chars == 0:
+            arc_map.pop(str(arc_num), None)
+        else:
+            arc_map[str(arc_num)] = chars
+        new_total = sum(arc_map.values())
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        c.execute(
+            "UPDATE productions SET arc_chars=?, script_chars=?, updated_at=? WHERE id=?",
+            (json.dumps(arc_map), new_total, now, pid)
+        )
+    return redirect(url_for("production_detail", pid=pid))
 def production_status(pid):
     new_status = request.form.get("status", "")
     valid = ("iniciado", "em_andamento", "pausado", "concluido")
