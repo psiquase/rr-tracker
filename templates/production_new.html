@@ -190,6 +190,29 @@
 </div>
 
 <script>
+  // Role pills (SHORT tab) — global scope
+  var _ROLE_STYLES = {
+    'produtor':   {col:'var(--blue)',  bg:'rgba(10,132,255,0.12)',  border:'rgba(10,132,255,0.35)'},
+    'roteirista': {col:'#bf5af2',      bg:'rgba(191,90,242,0.12)',  border:'rgba(191,90,242,0.35)'},
+    'editor':     {col:'var(--green)', bg:'rgba(48,209,88,0.12)',   border:'rgba(48,209,88,0.35)'},
+  };
+  window.pickRole = function(val) {
+    var inp = document.getElementById('short-role-value');
+    if (inp) inp.value = val;
+    document.querySelectorAll('#short-role-pills button').forEach(function(btn) {
+      var r = btn.getAttribute('data-role');
+      if (r === val) {
+        btn.style.borderColor = _ROLE_STYLES[r].border;
+        btn.style.background  = _ROLE_STYLES[r].bg;
+        btn.style.color       = _ROLE_STYLES[r].col;
+      } else {
+        btn.style.borderColor = 'rgba(255,255,255,0.12)';
+        btn.style.background  = 'rgba(255,255,255,0.05)';
+        btn.style.color       = 'var(--text-secondary)';
+      }
+    });
+  };
+
 (function(){
   var scriptInput = document.getElementById('script-input');
   if (!scriptInput) return;
@@ -282,29 +305,6 @@
       if (v >= 1 && v <= 15) hiddenArcs.value = v;
     });
   }
-
-  // Role pills (SHORT tab)
-  var ROLE_STYLES = {
-    'produtor':   {col:'var(--blue)',  bg:'rgba(10,132,255,0.12)', border:'rgba(10,132,255,0.35)'},
-    'roteirista': {col:'#bf5af2',      bg:'rgba(191,90,242,0.12)', border:'rgba(191,90,242,0.35)'},
-    'editor':     {col:'var(--green)', bg:'rgba(48,209,88,0.12)',  border:'rgba(48,209,88,0.35)'},
-  };
-  window.pickRole = function(val) {
-    var inp = document.getElementById('short-role-value');
-    if (inp) inp.value = val;
-    document.querySelectorAll('#short-role-pills button').forEach(function(btn) {
-      var r = btn.getAttribute('data-role');
-      if (r === val) {
-        btn.style.borderColor = ROLE_STYLES[r].border;
-        btn.style.background  = ROLE_STYLES[r].bg;
-        btn.style.color       = ROLE_STYLES[r].col;
-      } else {
-        btn.style.borderColor = 'rgba(255,255,255,0.12)';
-        btn.style.background  = 'rgba(255,255,255,0.05)';
-        btn.style.color       = 'var(--text-secondary)';
-      }
-    });
-  };
 })();
 </script>
 
