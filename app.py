@@ -134,6 +134,7 @@ def init_db():
                 id           INTEGER PRIMARY KEY AUTOINCREMENT,
                 title        TEXT    NOT NULL,
                 producer     TEXT    NOT NULL,
+                role         TEXT    DEFAULT 'produtor',
                 status       TEXT    DEFAULT 'iniciado',
                 started_at   TEXT    NOT NULL,
                 completed_at TEXT,
@@ -157,10 +158,12 @@ def init_db():
             conn.execute("ALTER TABLE productions ADD COLUMN co_producers TEXT DEFAULT ''")
         if 'elapsed_minutes' not in prod_cols:
             conn.execute("ALTER TABLE productions ADD COLUMN elapsed_minutes INTEGER DEFAULT 0")
-        # ── Shorts: migrate elapsed_minutes ──────────────────
+        # ── Shorts: migrate columns ───────────────────────────
         short_cols = [r[1] for r in conn.execute("PRAGMA table_info(shorts)").fetchall()]
         if 'elapsed_minutes' not in short_cols:
             conn.execute("ALTER TABLE shorts ADD COLUMN elapsed_minutes INTEGER DEFAULT 0")
+        if 'role' not in short_cols:
+            conn.execute("ALTER TABLE shorts ADD COLUMN role TEXT DEFAULT 'produtor'")
         conn.commit()
 
 
@@ -518,6 +521,7 @@ def db_shorts_report():
 
 def enrich_short(s):
     d = dict(s)
+    d['role'] = d.get('role') or 'produtor'
     elapsed = d.get('elapsed_minutes') or 0
     if d['status'] == 'concluido' and d.get('completed_at'):
         # Use stored elapsed (already accumulated at completion)
@@ -566,6 +570,8 @@ def shorts_new():
         title    = request.form.get("title",    "").strip()
         producer = request.form.get("producer", "").strip()
         notes    = request.form.get("notes",    "").strip()
+        role     = request.form.get("role",     "produtor").strip()
+        if role not in ("produtor", "roteirista", "editor"): role = "produtor"
         errors   = []
         if not title:    errors.append("Título obrigatório")
         if not producer: errors.append("Produtor obrigatório")
@@ -575,8 +581,8 @@ def shorts_new():
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             with get_db() as c:
                 c.execute(
-                    "INSERT INTO shorts (title,producer,status,started_at,notes) VALUES (?,?,?,?,?)",
-                    (title, producer, "em_andamento", now, notes)
+                    "INSERT INTO shorts (title,producer,role,status,started_at,notes) VALUES (?,?,?,?,?,?)",
+                    (title, producer, role, "em_andamento", now, notes)
                 )
             # If came from production_new page, show success there
             if request.form.get("from_prod") == "1" or from_prod:
