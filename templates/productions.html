@@ -184,6 +184,9 @@
                 border-bottom:{% if not loop.last %}1px solid rgba(255,255,255,0.05){% else %}none{% endif %}">
       <span style="font-size:14px;font-weight:600;color:var(--text-primary);flex:1;min-width:120px">{{ s.title }}</span>
       <span style="font-size:12px;color:var(--text-secondary)">{{ s.producer }}</span>
+      {% set role_cfg = {'produtor':('📹','var(--blue)','rgba(10,132,255,0.10)'), 'roteirista':('📝','#bf5af2','rgba(191,90,242,0.10)'), 'editor':('🎬','var(--green)','rgba(48,209,88,0.10)')} %}
+      {% set r_icon, r_col, r_bg = role_cfg.get(s.role or 'produtor', role_cfg['produtor']) %}
+      <span style="font-size:11px;font-weight:500;color:{{ r_col }};background:{{ r_bg }};border-radius:20px;padding:2px 10px">{{ r_icon }} {{ (s.role or 'produtor')|capitalize }}</span>
       <span style="font-size:11px;color:{{ sc[s.status] }};background:{{ sc[s.status] }}22;border-radius:20px;padding:3px 10px;font-weight:500">{{ sl[s.status] }}</span>
       <span style="font-size:12px;font-weight:500;color:var(--yellow)">{{ s.duration_minutes }} min</span>
       <!-- Actions -->
