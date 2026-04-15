@@ -1,68 +1,93 @@
 {% extends "base.html" %}
-{% block title %}NOVO SHORT{% endblock %}
-{% block header_icon %}<span style="color:var(--yellow)">⚡</span>{% endblock %}
-{% block header_title %}<span style="color:var(--yellow)">NOVO SHORT</span>{% endblock %}
+{% block title %}Novo Short{% endblock %}
+{% block header_icon %}⚡{% endblock %}
+{% block header_title %}Novo Short{% endblock %}
 
 {% block content %}
-<div style="max-width:560px;margin:0 auto">
-  <div style="margin-bottom:12px">
-    <span class="section-title yellow">◆ REGISTRAR NOVO SHORT</span>
-  </div>
-
-  <div class="form-card" style="border-color:var(--yellow);box-shadow:6px 6px 0 var(--y-dark)">
-    <div class="form-header" style="background:var(--yellow)">
-      <span>⚡</span>
-      <span>DADOS DO SHORT</span>
+<div style="max-width:480px;margin:0 auto">
+  <div class="form-card" style="border-color:var(--yellow)">
+    <div class="form-header" style="background:var(--yellow);color:#000">
+      <span>⚡</span><span>DADOS DO SHORT</span>
       <span style="margin-left:auto;font-size:10px;opacity:.7">* OBRIGATÓRIO</span>
     </div>
     <div class="form-body">
       <form method="POST" action="/shorts/new">
-
         <div class="field-group">
-          <label class="field-label required">◆ TÍTULO DO SHORT</label>
+          <label class="field-label required">◆ TÍTULO</label>
           <input class="pixel-input" type="text" name="title"
-                 placeholder="Ex: SF001, SF002, SF003..."
+                 placeholder="Ex: SF001, SF002..."
                  value="{{ request.form.get('title','') }}" required/>
         </div>
-
         <div class="field-group">
-          <label class="field-label required">◆ PRODUTOR</label>
+          <label class="field-label required">◆ NOME</label>
           <input class="pixel-input" type="text" name="producer"
-                 placeholder="Seu nome..."
-                 value="{{ request.form.get('producer','') }}" required/>
+                 placeholder="Seu nome..." value="{{ request.form.get('producer','') }}" required/>
         </div>
-
         <div class="field-group">
-          <label class="field-label">◆ OBSERVAÇÕES <span style="color:var(--gray2)">(opcional)</span></label>
-          <textarea class="pixel-textarea" name="notes"
-                    placeholder="Notas sobre este short...">{{ request.form.get('notes','') }}</textarea>
+          <label class="field-label required">◆ FUNÇÃO</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap" id="role-pills">
+            {% for val, lbl, col in [('produtor','📹 Produtor','var(--blue)'),('roteirista','📝 Roteirista','#bf5af2'),('editor','🎬 Editor','var(--green)')] %}
+            <label id="pill-{{ val }}" style="display:flex;align-items:center;gap:8px;cursor:pointer;
+                           padding:9px 16px;border-radius:10px;font-size:13px;font-weight:500;
+                           border:1px solid {% if request.form.get('role','produtor')==val %}{{ col }}{% else %}rgba(255,255,255,0.12){% endif %};
+                           background:{% if request.form.get('role','produtor')==val %}{{ col }}18{% else %}rgba(255,255,255,0.05){% endif %};
+                           color:{% if request.form.get('role','produtor')==val %}{{ col }}{% else %}var(--text-secondary){% endif %}">
+              <input type="radio" name="role" value="{{ val }}"
+                     {% if request.form.get('role','produtor')==val %}checked{% endif %}
+                     style="display:none" onchange="selectRole('{{ val }}')"/>
+              {{ lbl }}
+            </label>
+            {% endfor %}
+          </div>
         </div>
-
+        <div class="field-group">
+          <label class="field-label">◆ OBSERVAÇÕES <span style="color:var(--text-tertiary)">(opcional)</span></label>
+          <textarea class="pixel-textarea" name="notes"
+                    placeholder="Notas...">{{ request.form.get('notes','') }}</textarea>
+        </div>
         <div class="btn-row">
           <button type="submit" class="action-btn"
-                  style="border-color:var(--yellow);color:var(--y-soft);position:relative">
-            <span style="position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--yellow)"></span>
-            ⚡ INICIAR PRODUÇÃO
+                  style="border-color:rgba(255,214,10,0.4);color:var(--yellow);background:rgba(255,214,10,0.10)">
+            ⚡ Iniciar Short
           </button>
-          <a href="/shorts" class="action-btn gray-btn">← VOLTAR</a>
+          <a href="/productions" class="action-btn gray-btn">← Voltar</a>
         </div>
       </form>
-
       {% if msg %}
-        <div class="status-msg {{ msg_type }}">
-          {% if msg_type=='success' %}✔{% else %}⚠{% endif %} &nbsp;{{ msg }}
-        </div>
+      <div class="status-msg {{ msg_type }}">{% if msg_type=='success' %}✔{% else %}⚠{% endif %} {{ msg }}</div>
       {% endif %}
     </div>
   </div>
-
-  <div style="margin-top:14px;font-size:10px;color:var(--gray2);
-              border:1px solid var(--border2);padding:12px 14px;
-              background:var(--card)">
-    <span style="color:var(--yellow)">◆</span>&nbsp;
-    O início é registrado automaticamente ao criar o short.<br/>
-    Quando terminar, clique em <strong style="color:var(--gray2)">✔ FIM</strong>
-    na lista de shorts para registrar a conclusão.
-  </div>
 </div>
+
+<script>
+var ROLE_COLORS = {
+  'produtor':   {col:'var(--blue)',   bg:'rgba(10,132,255,0.10)',  border:'rgba(10,132,255,0.35)'},
+  'roteirista': {col:'#bf5af2',       bg:'rgba(191,90,242,0.10)',  border:'rgba(191,90,242,0.35)'},
+  'editor':     {col:'var(--green)',  bg:'rgba(48,209,88,0.10)',   border:'rgba(48,209,88,0.35)'},
+};
+function selectRole(val) {
+  Object.keys(ROLE_COLORS).forEach(function(v) {
+    var pill = document.getElementById('pill-' + v);
+    if (!pill) return;
+    if (v === val) {
+      pill.style.borderColor = ROLE_COLORS[v].border;
+      pill.style.background  = ROLE_COLORS[v].bg;
+      pill.style.color       = ROLE_COLORS[v].col;
+    } else {
+      pill.style.borderColor = 'rgba(255,255,255,0.12)';
+      pill.style.background  = 'rgba(255,255,255,0.05)';
+      pill.style.color       = 'var(--text-secondary)';
+    }
+  });
+  document.querySelector('input[name=role][value="'+val+'"]').checked = true;
+}
+// Make whole label clickable
+document.querySelectorAll('#role-pills label').forEach(function(lbl) {
+  lbl.addEventListener('click', function() {
+    var inp = lbl.querySelector('input[type=radio]');
+    if (inp) selectRole(inp.value);
+  });
+});
+</script>
 {% endblock %}
