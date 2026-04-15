@@ -5,89 +5,108 @@
 
 {% block content %}
 <div style="max-width:480px;margin:0 auto">
-  <div class="form-card" style="border-color:var(--yellow)">
-    <div class="form-header" style="background:var(--yellow);color:#000">
-      <span>⚡</span><span>DADOS DO SHORT</span>
-      <span style="margin-left:auto;font-size:10px;opacity:.7">* OBRIGATÓRIO</span>
+  <div class="form-card" style="border-color:rgba(255,214,10,0.35)">
+    <div class="form-header" style="border-bottom:1px solid rgba(255,255,255,0.07)">
+      <span>⚡</span><span>Novo Short</span>
+      <span style="margin-left:auto;font-size:11px;color:var(--text-tertiary)">* obrigatório</span>
     </div>
     <div class="form-body">
       <form method="POST" action="/shorts/new">
+
         <div class="field-group">
-          <label class="field-label required">◆ TÍTULO</label>
+          <label class="field-label required">◆ Título</label>
           <input class="pixel-input" type="text" name="title"
                  placeholder="Ex: SF001, SF002..."
                  value="{{ request.form.get('title','') }}" required/>
         </div>
+
         <div class="field-group">
-          <label class="field-label required">◆ NOME</label>
+          <label class="field-label required">◆ Nome</label>
           <input class="pixel-input" type="text" name="producer"
                  placeholder="Seu nome..." value="{{ request.form.get('producer','') }}" required/>
         </div>
+
         <div class="field-group">
-          <label class="field-label required">◆ FUNÇÃO</label>
+          <label class="field-label">◆ Função</label>
           <div style="display:flex;gap:8px;flex-wrap:wrap" id="role-pills">
-            {% for val, lbl, col in [('produtor','📹 Produtor','var(--blue)'),('roteirista','📝 Roteirista','#bf5af2'),('editor','🎬 Editor','var(--green)')] %}
-            <label id="pill-{{ val }}" style="display:flex;align-items:center;gap:8px;cursor:pointer;
-                           padding:9px 16px;border-radius:10px;font-size:13px;font-weight:500;
-                           border:1px solid {% if request.form.get('role','produtor')==val %}{{ col }}{% else %}rgba(255,255,255,0.12){% endif %};
-                           background:{% if request.form.get('role','produtor')==val %}{{ col }}18{% else %}rgba(255,255,255,0.05){% endif %};
-                           color:{% if request.form.get('role','produtor')==val %}{{ col }}{% else %}var(--text-secondary){% endif %}">
-              <input type="radio" name="role" value="{{ val }}"
-                     {% if request.form.get('role','produtor')==val %}checked{% endif %}
-                     style="display:none" onchange="selectRole('{{ val }}')"/>
-              {{ lbl }}
-            </label>
-            {% endfor %}
+            <button type="button" data-role="produtor" onclick="pickRole('produtor')"
+                    style="padding:9px 16px;border-radius:10px;font-size:13px;font-weight:500;
+                           cursor:pointer;font-family:var(--font-ui);transition:all 0.12s;
+                           border:1px solid rgba(10,132,255,0.35);
+                           background:rgba(10,132,255,0.12);color:var(--blue)">
+              📹 Produtor
+            </button>
+            <button type="button" data-role="roteirista" onclick="pickRole('roteirista')"
+                    style="padding:9px 16px;border-radius:10px;font-size:13px;font-weight:500;
+                           cursor:pointer;font-family:var(--font-ui);transition:all 0.12s;
+                           border:1px solid rgba(255,255,255,0.12);
+                           background:rgba(255,255,255,0.05);color:var(--text-secondary)">
+              📝 Roteirista
+            </button>
+            <button type="button" data-role="editor" onclick="pickRole('editor')"
+                    style="padding:9px 16px;border-radius:10px;font-size:13px;font-weight:500;
+                           cursor:pointer;font-family:var(--font-ui);transition:all 0.12s;
+                           border:1px solid rgba(255,255,255,0.12);
+                           background:rgba(255,255,255,0.05);color:var(--text-secondary)">
+              🎬 Editor
+            </button>
           </div>
+          <input type="hidden" name="role" id="role-value" value="produtor"/>
         </div>
+
         <div class="field-group">
-          <label class="field-label">◆ OBSERVAÇÕES <span style="color:var(--text-tertiary)">(opcional)</span></label>
+          <label class="field-label">◆ Observações <span style="color:var(--text-tertiary)">(opcional)</span></label>
           <textarea class="pixel-textarea" name="notes"
                     placeholder="Notas...">{{ request.form.get('notes','') }}</textarea>
         </div>
-        <div class="btn-row">
-          <button type="submit" class="action-btn"
-                  style="border-color:rgba(255,214,10,0.4);color:var(--yellow);background:rgba(255,214,10,0.10)">
+
+        <div style="margin-top:12px;padding:10px 14px;background:rgba(255,214,10,0.07);
+                    border:1px solid rgba(255,214,10,0.18);border-radius:10px;
+                    font-size:12px;color:var(--text-secondary)">
+          ⚡ O tempo começa a contar agora. Clique em <strong style="color:var(--text-primary)">✔ Concluir</strong> ao terminar.
+        </div>
+
+        <div class="btn-row" style="margin-top:16px">
+          <button type="submit"
+                  style="background:rgba(255,214,10,0.12);border:1px solid rgba(255,214,10,0.35);
+                         color:var(--yellow);border-radius:10px;padding:10px 22px;cursor:pointer;
+                         font-family:var(--font-ui);font-size:13px;font-weight:500">
             ⚡ Iniciar Short
           </button>
           <a href="/productions" class="action-btn gray-btn">← Voltar</a>
         </div>
       </form>
+
       {% if msg %}
-      <div class="status-msg {{ msg_type }}">{% if msg_type=='success' %}✔{% else %}⚠{% endif %} {{ msg }}</div>
+      <div class="status-msg {{ msg_type }}" style="margin-top:14px">
+        {% if msg_type=='success' %}✔{% else %}⚠{% endif %} {{ msg }}
+      </div>
       {% endif %}
     </div>
   </div>
 </div>
 
 <script>
-var ROLE_COLORS = {
-  'produtor':   {col:'var(--blue)',   bg:'rgba(10,132,255,0.10)',  border:'rgba(10,132,255,0.35)'},
-  'roteirista': {col:'#bf5af2',       bg:'rgba(191,90,242,0.10)',  border:'rgba(191,90,242,0.35)'},
-  'editor':     {col:'var(--green)',  bg:'rgba(48,209,88,0.10)',   border:'rgba(48,209,88,0.35)'},
+var ROLE_STYLES = {
+  'produtor':   {col:'var(--blue)',  bg:'rgba(10,132,255,0.12)',  border:'rgba(10,132,255,0.35)'},
+  'roteirista': {col:'#bf5af2',      bg:'rgba(191,90,242,0.12)',  border:'rgba(191,90,242,0.35)'},
+  'editor':     {col:'var(--green)', bg:'rgba(48,209,88,0.12)',   border:'rgba(48,209,88,0.35)'},
 };
-function selectRole(val) {
-  Object.keys(ROLE_COLORS).forEach(function(v) {
-    var pill = document.getElementById('pill-' + v);
-    if (!pill) return;
-    if (v === val) {
-      pill.style.borderColor = ROLE_COLORS[v].border;
-      pill.style.background  = ROLE_COLORS[v].bg;
-      pill.style.color       = ROLE_COLORS[v].col;
+
+function pickRole(val) {
+  document.getElementById('role-value').value = val;
+  document.querySelectorAll('#role-pills button').forEach(function(btn) {
+    var r = btn.getAttribute('data-role');
+    if (r === val) {
+      btn.style.borderColor = ROLE_STYLES[r].border;
+      btn.style.background  = ROLE_STYLES[r].bg;
+      btn.style.color       = ROLE_STYLES[r].col;
     } else {
-      pill.style.borderColor = 'rgba(255,255,255,0.12)';
-      pill.style.background  = 'rgba(255,255,255,0.05)';
-      pill.style.color       = 'var(--text-secondary)';
+      btn.style.borderColor = 'rgba(255,255,255,0.12)';
+      btn.style.background  = 'rgba(255,255,255,0.05)';
+      btn.style.color       = 'var(--text-secondary)';
     }
   });
-  document.querySelector('input[name=role][value="'+val+'"]').checked = true;
 }
-// Make whole label clickable
-document.querySelectorAll('#role-pills label').forEach(function(lbl) {
-  lbl.addEventListener('click', function() {
-    var inp = lbl.querySelector('input[type=radio]');
-    if (inp) selectRole(inp.value);
-  });
-});
 </script>
 {% endblock %}
