@@ -55,25 +55,28 @@
                  placeholder="Seu nome..." value="{{ request.form.get('producer','') }}" required/>
         </div>
         <div class="field-group">
-          <label class="field-label required">◆ FUNÇÃO</label>
-          <div style="display:flex;gap:8px;flex-wrap:wrap" id="short-role-pills">
-            {% for val, lbl, col, bg in [
-              ('produtor',   '📹 Produtor',   'var(--blue)',   'rgba(10,132,255,0.12)'),
-              ('roteirista', '📝 Roteirista', '#bf5af2',       'rgba(191,90,242,0.12)'),
-              ('editor',     '🎬 Editor',     'var(--green)',  'rgba(48,209,88,0.12)'),
-            ] %}
-            <button type="button" data-role="{{ val }}"
-                    onclick="pickRole('{{ val }}')"
-                    style="padding:9px 16px;border-radius:10px;font-size:13px;font-weight:500;
-                           cursor:pointer;font-family:var(--font-ui);transition:all 0.12s;
-                           border:1px solid {% if loop.first %}{{ col }}{% else %}rgba(255,255,255,0.12){% endif %};
-                           background:{% if loop.first %}{{ bg }}{% else %}rgba(255,255,255,0.05){% endif %};
-                           color:{% if loop.first %}{{ col }}{% else %}var(--text-secondary){% endif %}">
-              {{ lbl }}
+          <label class="field-label">◆ Função</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button type="button" id="pn-role-produtor" onclick="setPnRole('produtor')"
+                    style="padding:9px 18px;border-radius:10px;font-size:13px;font-weight:500;
+                           cursor:pointer;font-family:var(--font-ui);
+                           border:1px solid rgba(10,132,255,0.4);background:rgba(10,132,255,0.15);color:var(--blue)">
+              📹 Produtor
             </button>
-            {% endfor %}
+            <button type="button" id="pn-role-roteirista" onclick="setPnRole('roteirista')"
+                    style="padding:9px 18px;border-radius:10px;font-size:13px;font-weight:500;
+                           cursor:pointer;font-family:var(--font-ui);
+                           border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5)">
+              📝 Roteirista
+            </button>
+            <button type="button" id="pn-role-editor" onclick="setPnRole('editor')"
+                    style="padding:9px 18px;border-radius:10px;font-size:13px;font-weight:500;
+                           cursor:pointer;font-family:var(--font-ui);
+                           border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5)">
+              🎬 Editor
+            </button>
           </div>
-          <input type="hidden" name="role" id="short-role-value" value="produtor"/>
+          <input type="hidden" name="role" id="pn-role-hidden" value="produtor"/>
         </div>
         <div class="field-group">
           <label class="field-label">◆ OBSERVAÇÕES <span style="color:var(--gray2)">(opcional)</span></label>
@@ -190,28 +193,23 @@
 </div>
 
 <script>
-  // Role pills (SHORT tab) — global scope
-  var _ROLE_STYLES = {
-    'produtor':   {col:'var(--blue)',  bg:'rgba(10,132,255,0.12)',  border:'rgba(10,132,255,0.35)'},
-    'roteirista': {col:'#bf5af2',      bg:'rgba(191,90,242,0.12)',  border:'rgba(191,90,242,0.35)'},
-    'editor':     {col:'var(--green)', bg:'rgba(48,209,88,0.12)',   border:'rgba(48,209,88,0.35)'},
+function setPnRole(val) {
+  document.getElementById('pn-role-hidden').value = val;
+  var S = {
+    'produtor':   {b:'rgba(10,132,255,0.4)',  bg:'rgba(10,132,255,0.15)',  c:'#0a84ff'},
+    'roteirista': {b:'rgba(191,90,242,0.4)',  bg:'rgba(191,90,242,0.15)', c:'#bf5af2'},
+    'editor':     {b:'rgba(48,209,88,0.4)',   bg:'rgba(48,209,88,0.15)',  c:'#30d158'}
   };
-  window.pickRole = function(val) {
-    var inp = document.getElementById('short-role-value');
-    if (inp) inp.value = val;
-    document.querySelectorAll('#short-role-pills button').forEach(function(btn) {
-      var r = btn.getAttribute('data-role');
-      if (r === val) {
-        btn.style.borderColor = _ROLE_STYLES[r].border;
-        btn.style.background  = _ROLE_STYLES[r].bg;
-        btn.style.color       = _ROLE_STYLES[r].col;
-      } else {
-        btn.style.borderColor = 'rgba(255,255,255,0.12)';
-        btn.style.background  = 'rgba(255,255,255,0.05)';
-        btn.style.color       = 'var(--text-secondary)';
-      }
-    });
-  };
+  ['produtor','roteirista','editor'].forEach(function(r) {
+    var btn = document.getElementById('pn-role-' + r);
+    if (!btn) return;
+    if (r === val) {
+      btn.style.cssText += ';border-color:' + S[r].b + '!important;background:' + S[r].bg + '!important;color:' + S[r].c + '!important';
+    } else {
+      btn.style.cssText += ';border-color:rgba(255,255,255,0.12)!important;background:rgba(255,255,255,0.05)!important;color:rgba(255,255,255,0.5)!important';
+    }
+  });
+}
 
 (function(){
   var scriptInput = document.getElementById('script-input');
