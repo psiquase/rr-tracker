@@ -28,36 +28,39 @@
 
         <div class="field-group">
           <label class="field-label">◆ Função</label>
-          <div style="display:flex;gap:8px;flex-wrap:wrap" id="role-pills">
-            <button type="button" data-role="produtor" onclick="pickRole('produtor')"
-                    style="padding:9px 16px;border-radius:10px;font-size:13px;font-weight:500;
-                           cursor:pointer;font-family:var(--font-ui);transition:all 0.12s;
-                           border:1px solid rgba(10,132,255,0.35);
-                           background:rgba(10,132,255,0.12);color:var(--blue)">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button type="button" id="role-produtor"
+                    onclick="setRole('produtor')"
+                    style="padding:9px 18px;border-radius:10px;font-size:13px;font-weight:500;
+                           cursor:pointer;font-family:var(--font-ui);
+                           border:1px solid rgba(10,132,255,0.4);
+                           background:rgba(10,132,255,0.15);color:var(--blue)">
               📹 Produtor
             </button>
-            <button type="button" data-role="roteirista" onclick="pickRole('roteirista')"
-                    style="padding:9px 16px;border-radius:10px;font-size:13px;font-weight:500;
-                           cursor:pointer;font-family:var(--font-ui);transition:all 0.12s;
+            <button type="button" id="role-roteirista"
+                    onclick="setRole('roteirista')"
+                    style="padding:9px 18px;border-radius:10px;font-size:13px;font-weight:500;
+                           cursor:pointer;font-family:var(--font-ui);
                            border:1px solid rgba(255,255,255,0.12);
-                           background:rgba(255,255,255,0.05);color:var(--text-secondary)">
+                           background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5)">
               📝 Roteirista
             </button>
-            <button type="button" data-role="editor" onclick="pickRole('editor')"
-                    style="padding:9px 16px;border-radius:10px;font-size:13px;font-weight:500;
-                           cursor:pointer;font-family:var(--font-ui);transition:all 0.12s;
+            <button type="button" id="role-editor"
+                    onclick="setRole('editor')"
+                    style="padding:9px 18px;border-radius:10px;font-size:13px;font-weight:500;
+                           cursor:pointer;font-family:var(--font-ui);
                            border:1px solid rgba(255,255,255,0.12);
-                           background:rgba(255,255,255,0.05);color:var(--text-secondary)">
+                           background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5)">
               🎬 Editor
             </button>
           </div>
-          <input type="hidden" name="role" id="role-value" value="produtor"/>
+          <input type="hidden" name="role" id="role-hidden" value="produtor"/>
         </div>
 
         <div class="field-group">
           <label class="field-label">◆ Observações <span style="color:var(--text-tertiary)">(opcional)</span></label>
           <textarea class="pixel-textarea" name="notes"
-                    placeholder="Notas...">{{ request.form.get('notes','') }}</textarea>
+                    placeholder="Notas sobre este short...">{{ request.form.get('notes','') }}</textarea>
         </div>
 
         <div style="margin-top:12px;padding:10px 14px;background:rgba(255,214,10,0.07);
@@ -87,25 +90,22 @@
 </div>
 
 <script>
-var ROLE_STYLES = {
-  'produtor':   {col:'var(--blue)',  bg:'rgba(10,132,255,0.12)',  border:'rgba(10,132,255,0.35)'},
-  'roteirista': {col:'#bf5af2',      bg:'rgba(191,90,242,0.12)',  border:'rgba(191,90,242,0.35)'},
-  'editor':     {col:'var(--green)', bg:'rgba(48,209,88,0.12)',   border:'rgba(48,209,88,0.35)'},
-};
+function setRole(val) {
+  document.getElementById('role-hidden').value = val;
 
-function pickRole(val) {
-  document.getElementById('role-value').value = val;
-  document.querySelectorAll('#role-pills button').forEach(function(btn) {
-    var r = btn.getAttribute('data-role');
-    if (r === val) {
-      btn.style.borderColor = ROLE_STYLES[r].border;
-      btn.style.background  = ROLE_STYLES[r].bg;
-      btn.style.color       = ROLE_STYLES[r].col;
-    } else {
-      btn.style.borderColor = 'rgba(255,255,255,0.12)';
-      btn.style.background  = 'rgba(255,255,255,0.05)';
-      btn.style.color       = 'var(--text-secondary)';
-    }
+  var styles = {
+    'produtor':   { border:'rgba(10,132,255,0.4)',   bg:'rgba(10,132,255,0.15)',  color:'var(--blue)'   },
+    'roteirista': { border:'rgba(191,90,242,0.4)',   bg:'rgba(191,90,242,0.15)', color:'#bf5af2'       },
+    'editor':     { border:'rgba(48,209,88,0.4)',    bg:'rgba(48,209,88,0.15)',  color:'var(--green)'  }
+  };
+  var off = { border:'rgba(255,255,255,0.12)', bg:'rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.5)' };
+
+  ['produtor','roteirista','editor'].forEach(function(r) {
+    var btn = document.getElementById('role-' + r);
+    var s = (r === val) ? styles[r] : off;
+    btn.style.borderColor = s.border;
+    btn.style.background  = s.bg;
+    btn.style.color       = s.color;
   });
 }
 </script>
